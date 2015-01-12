@@ -1,3 +1,45 @@
+
+# 2 hop trade
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 15.0
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+WITH fsys as fromSystem, 
+fsta as fromStation, 
+tsta as toStation, 
+tsys as toSystem, 
+commodity as hop1Commodity, 
+sell.sellPrice - buy.buyPrice as hop1UnitProfit, 
+shift.ly as hop1ShiftLy
+MATCH
+(commodity2)-[sell2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT]-(tsys2:System)-[:HAS]-(tsta2:Station)-[buy2:EXCHANGE]-(commodity2)
+WHERE shift2.ly <= 15.0
+and sell2.sellPrice > 0
+and sell2.supply > 0
+and buy2.buyPrice > 0
+and buy2.buyPrice < sell2.sellPrice
+RETURN 
+fromSystem.name as startSystem, 
+fromStation.name as startStation, 
+hop1Commodity.name as buyingCommodity,
+hop1UnitProfit, 
+hop1ShiftLy,
+toSystem.name as firstStopSystem, 
+toStation.name as firstStopStation,
+commodity2.name as buying2Commodity, 
+sell2.sellPrice - buy2.buyPrice as hop2UnitProfit, 
+shift2.ly as hop2Ly, 
+tsys2.name as secondStopSystem, 
+tsta2.name as secondsStopStationName, 
+hop1UnitProfit + (sell2.sellPrice - buy2.buyPrice) as roundTripUnitProfit
+ORDER BY roundTripUnitProfit DESC
+LIMIT 3
+
+
 # newest profit finder
 
 match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
