@@ -1,0 +1,185 @@
+# newest profit finder
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 9.0
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, sell.sellPrice - buy.buyPrice as unit_profit, shift.ly
+ORDER BY unit_profit DESC
+LIMIT 5
+
+
+
+MATCH (n)
+OPTIONAL MATCH (n)-[r]-()
+DELETE n,r;
+
+LOAD CSV WITH HEADERS FROM "file:///Users/jrosocha/trade/System.csv" AS csvLine
+CREATE (system:System {name:UPPER(csvLine.system), pos_x:toFloat(csvLine.pos_x), pos_y:toFloat(csvLine.pos_y), pos_z:toFloat(csvLine.pos_z)});
+CREATE INDEX ON :System(name);
+
+LOAD CSV WITH HEADERS FROM "file:///Users/jrosocha/trade/Station.csv" AS csvLine
+MATCH (system:System {name:UPPER(csvLine.system)})
+CREATE (station:Station {name:UPPER(csvLine.station), blackmarket:csvLine.blackmarket, max_pad_size:csvLine.max_pad_size, ls_from_star:toFloat(csvLine.ls_from_star)})
+CREATE (system)-[:HAS {ls_from_star:toFloat(csvLine.ls_from_star)}]->(station);
+CREATE INDEX ON :Station(name);
+
+LOAD CSV WITH HEADERS FROM "file:///Users/jrosocha/trade/StationBuying.csv" AS csvLine
+MATCH (station:Station {name:UPPER(csvLine.station)})
+MERGE (commodity:Commodity {name:UPPER(csvLine.item), category:UPPER(csvLine.category)})
+CREATE (station)-[:BUYING{ price:toInt(csvLine.price), units:toInt(csvLine.units)}]->(commodity);
+
+LOAD CSV WITH HEADERS FROM "file:///Users/jrosocha/trade/StationSelling.csv" AS csvLine
+MATCH (station:Station {name:UPPER(csvLine.station)})
+MERGE (commodity:Commodity {name:UPPER(csvLine.item), category:UPPER(csvLine.category)})
+CREATE (station)-[:SELLING{ price:toInt(csvLine.price), units:toInt(csvLine.units)}]->(commodity);
+
+CREATE INDEX ON :Commodity(name);
+
+#systems with stations near
+MATCH (f:System{name:'CIGURU'}),(t:System)-[:HAS]->(p:Station)
+WHERE f.name<>t.name
+AND sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= 15.0
+RETURN DISTINCT t, sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) as ly
+
+#system stations
+MATCH (s:System {name:'CIGURU'})-[a]-(st:Station) RETURN s.name, st.name
+
+MATCH (s:System {name:'CIGURU'})-[:HAS]->(st:Station)
+RETURN s.name, st.name
+
+# items sold in a system
+MATCH (s:System {name:'CIGURU'})-[:HAS]->(st:Station)-[sell:SELLING]->(c:Commodity)
+WHERE sell.units > 0
+RETURN s.name, st.name, c.name, sell.units, sell.price
+
+#items bought in a system
+MATCH (s:System {name:'CIGURU'})-[:HAS]->(st:Station)-[buy:BUYING]->(c:Commodity)
+RETURN s.name, st.name, c.name, buy.price
+
+#items sold in your system that are bought nearby
+MATCH (f:System {name:'CIGURU'})-[:HAS]->(st:Station)-[sell:SELLING]->(c:Commodity)<-[buy:BUYING]-(to_st:Station)<-[:HAS]-(t:System)
+WHERE sell.units > 0
+AND sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= 15.0
+RETURN DISTINCT f.name, st.name, c.name, sell.units, (sell.price - buy.price) as unit_profit, to_st.name, t.name
+ORDER BY unit_profit DESC
+LIMIT 5
+
+###not working yet
+
+MATCH (f:System{name:'CIGURU'})-[:HAS]->(fs:Station)-[sell:SELLING]->(commodity:Commidity)<-[buy:BUYING]-(ts:Station)<-[:HAS]-(t:System)
+WHERE sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= 15.0
+RETURN t.name, ts.name, commodity.name, sell.price - buy.price as unit_profit           
+                                
+                                
+MATCH (f:System)-[:HAS]->(fs:Station)-[sell:SELLING]->(c:Commidity)
+WHERE f.name='CIGURU'
+RETURN f.name, fs.name, sell.price, c.name                  
+                                
+                                
+MATCH (f:System {name:'CIGURU'})-[:HAS]->(st:Station)-[sell:SELLING]->(c:Commodity)<-[buy:BUYING]-(to_st:Station)<-[:HAS]-(t:System) WHERE sell.units > 0 AND sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= 15.0 RETURN DISTINCT f.name, st.name, c.name, sell.units, (sell.price - buy.price) as unit_profit, to_st.name, t.name ORDER BY unit_profit DESC LIMIT 5
+
+
+
+MATCH (t:System), (f:System{name:blah blah})
+WHERE t.name<>f.name
+MERGE (f)-[:FRAMESHIFT { ly: sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2))}]->(t);
+
+
+MATCH (system:System)
+WHERE system.name='AIABIKO'
+OPTIONAL MATCH (system)-[:HAS]->(station:Station) 
+WHERE station.name='GONE' 
+
+                                
+MATCH (system:System) WHERE system.name='AIABIKO' OPTIONAL MATCH (system)-[:HAS]->(station:Station) 
+WHERE station.name='GONE'
+WITH station, station
+WHEN station IS NULL
+return system, station                      
+
+
+
+MATCH (system:System) WHERE system.name='AIABIKO' OPTIONAL MATCH (system)-[:HAS]->(station:Station) WHERE station.name='GONE' WITH system, station WHERE station IS NULL RETURN system, station
+
+
+
+
+
+
+MATCH (f:System)-[:HAS]->(st:Station)-[sell:SELLING]->(c:Commodity)<-[buy:BUYING]-(to_st:Station)<-[:HAS]-(t:System) WHERE sell.units > 0 AND sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= 15.0 RETURN DISTINCT f.name, st.name, c.name, sell.units, (sell.price - buy.price) as unit_profit, to_st.name, t.name ORDER BY unit_profit DESC LIMIT 5
+
+
+
+
+
+match (s:Station)-[:HAS]-(from:System)-[shift:FRAMESHIFT]-(to:System)-[:has]-(port:Station)
+where s.name = 'GOOCH HUB' and shift.ly <9
+return s, from, to, port
+
+
+# new model from and to within distance
+
+match (fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 9.0
+return fsta, fsys, tsys, tsta
+
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 9.0
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > s.sellPrice
+return commodity, buy, sell
+
+
+
+# newest profit finder
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 9.0
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, sell.sellPrice - buy.buyPrice as unit_profit, shift.ly
+ORDER BY unit_profit DESC
+LIMIT 5
+
+
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and shift.ly <= 9.0
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+WITH fsta as from, tsta to, tsys as to_system, commodity as lap1Commodity, sell.sellPrice - buy.buyPrice as unit_profit, shift.ly
+MATCH
+(commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-
+
+
+ORDER BY unit_profit DESC
+LIMIT 5
+
+
+
+#really slow, but the best deal within 3 hops that are less than some lys
+
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT*1..3]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and all(x IN shift WHERE x.ly <= 9.0)
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, sell.sellPrice - buy.buyPrice as unit_profit
+ORDER BY unit_profit DESC
+LIMIT 5

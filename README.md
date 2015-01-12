@@ -14,7 +14,6 @@ Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 * cd build/install/jarvis/data
 * edit jarvis.properties. Change the line that reads like below to point to where yourElite OCR created .csv files go.
 
-    # a folder that will contain all of the csv files created by elite ocr
     eliteocr.directory.path=/Users/jrosocha/trade/Elite Dangerous
 
 * cd ../bin (or build/install/jarvis/bin for those of you who are lost)
