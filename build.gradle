@@ -1,0 +1,40 @@
+description = 'Jarvis Shell'
+apply plugin: 'base'
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+repositories {
+	maven { url "http://repo.springsource.org/libs-milestone" }
+	maven { url "http://repo.springsource.org/libs-release" }
+	mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+    compile "org.neo4j:neo4j:$neo4jVersion"
+	compile "org.springframework.shell:spring-shell:$springShellVersion"
+    compile "com.google.guava:guava:$guavaVersion"
+	testCompile "junit:junit:$junitVersion"
+	runtime "log4j:log4j:$log4jVersion"
+}
+
+mainClassName = "org.springframework.shell.Bootstrap"
+applicationDefaultJvmArgs = ["-Xmx2G"]
+defaultTasks 'installApp'
+
+task copyData(type: Copy) {
+  from 'data'
+  into 'build/data'
+}
+
+applicationDistribution.from(copyData) {
+    into "data"
+}
+
+run {
+    standardInput = System.in
+}
+
+
+
