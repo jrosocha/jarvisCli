@@ -7,13 +7,13 @@ and shift.ly <= 15.0
 and sell.sellPrice > 0
 and sell.supply > 0
 and buy.buyPrice > 0
-and buy.buyPrice < sell.sellPrice
+and buy.buyPrice > sell.sellPrice
 WITH fsys as fromSystem, 
 fsta as fromStation, 
 tsta as toStation, 
 tsys as toSystem, 
 commodity as hop1Commodity, 
-sell.sellPrice - buy.buyPrice as hop1UnitProfit, 
+buy.buyPrice - sell.sellPrice as hop1UnitProfit, 
 shift.ly as hop1ShiftLy
 MATCH
 (commodity2)-[sell2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT]-(tsys2:System)-[:HAS]-(tsta2:Station)-[buy2:EXCHANGE]-(commodity2)
@@ -21,7 +21,7 @@ WHERE shift2.ly <= 15.0
 and sell2.sellPrice > 0
 and sell2.supply > 0
 and buy2.buyPrice > 0
-and buy2.buyPrice < sell2.sellPrice
+and buy2.buyPrice > sell2.sellPrice
 RETURN 
 fromSystem.name as startSystem, 
 fromStation.name as startStation, 
@@ -31,11 +31,11 @@ hop1ShiftLy,
 toSystem.name as firstStopSystem, 
 toStation.name as firstStopStation,
 commodity2.name as buying2Commodity, 
-sell2.sellPrice - buy2.buyPrice as hop2UnitProfit, 
+buy2.buyPrice - sell2.sellPrice as hop2UnitProfit, 
 shift2.ly as hop2Ly, 
 tsys2.name as secondStopSystem, 
 tsta2.name as secondsStopStationName, 
-hop1UnitProfit + (sell2.sellPrice - buy2.buyPrice) as roundTripUnitProfit
+hop1UnitProfit + (buy2.buyPrice - sell2.sellPrice) as roundTripUnitProfit
 ORDER BY roundTripUnitProfit DESC
 LIMIT 3
 
@@ -185,30 +185,23 @@ return commodity, buy, sell
 
 match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
 where fsta.name='GOOCH HUB'
-and shift.ly <= 9.0
+and shift.ly <= 15.0
 and sell.sellPrice > 0
-and sell.supply > 0
+and sell.supply >= 44
+and 200000 - (sell.sellPrice * 44) > 0
 and buy.buyPrice > 0
-and buy.buyPrice < sell.sellPrice
-return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, sell.sellPrice - buy.buyPrice as unit_profit, shift.ly
-ORDER BY unit_profit DESC
-LIMIT 5
-
-
-
-match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
-where fsta.name='GOOCH HUB'
-and shift.ly <= 9.0
-and sell.sellPrice > 0
-and sell.supply > 0
-and buy.buyPrice > 0
-and buy.buyPrice < sell.sellPrice
-WITH fsta as from, tsta to, tsys as to_system, commodity as lap1Commodity, sell.sellPrice - buy.buyPrice as unit_profit, shift.ly
-MATCH
-(commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-
-
-
-ORDER BY unit_profit DESC
+and buy.buyPrice > sell.sellPrice
+return 
+fsta.name as fromStation, 
+tsta.name as toStation, 
+tsys.name as toSystem, 
+commodity.name, 
+sell.sellPrice - buy.buyPrice as unitProfit,
+(sell.sellPrice * 44) as cargoBoughtFor,
+(buy.buyPrice * 44) as cargoSoldFor,
+(sell.sellPrice*44) - (buy.buyPrice*44) as profit,
+shift.ly
+ORDER BY unitProfit DESC
 LIMIT 5
 
 
@@ -221,7 +214,43 @@ and all(x IN shift WHERE x.ly <= 9.0)
 and sell.sellPrice > 0
 and sell.supply > 0
 and buy.buyPrice > 0
-and buy.buyPrice < sell.sellPrice
-return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, sell.sellPrice - buy.buyPrice as unit_profit
+and buy.buyPrice > sell.sellPrice
+return fsta.name as from, tsta.name as to, tsys.name as to_system, commodity.name, buy.buyPrice - sell.sellPrice as unit_profit
 ORDER BY unit_profit DESC
 LIMIT 5
+
+
+# this sucker never returns
+match (commodity)-[sell:EXCHANGE]-(fsta:Station)-[:HAS]-(fsys:System)-[shift:FRAMESHIFT*1..3]-(tsys:System)-[:HAS]-(tsta:Station)-[buy:EXCHANGE]-(commodity)
+where fsta.name='GOOCH HUB'
+and all(x IN shift WHERE x.ly <= 9.0)
+and sell.sellPrice > 0
+and sell.supply > 0
+and buy.buyPrice > 0
+and buy.buyPrice < sell.sellPrice
+WITH fsys as fromSystem, 
+fsta as fromStation, 
+tsta as toStation, 
+tsys as toSystem, 
+commodity as hop1Commodity, 
+sell.sellPrice - buy.buyPrice as hop1UnitProfit
+MATCH (commodity2)-[sell2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT*1..3]-(tsys2:System)-[:HAS]-(tsta2:Station)-[buy2:EXCHANGE]-(commodity2)
+WHERE all(x IN shift2 WHERE x.ly <= 9.0)
+and sell2.sellPrice > 0
+and sell2.supply > 0
+and buy2.buyPrice > 0
+and buy2.buyPrice < sell2.sellPrice
+RETURN 
+fromSystem.name as startSystem, 
+fromStation.name as startStation, 
+hop1Commodity.name as buyingCommodity,
+hop1UnitProfit, 
+toSystem.name as firstStopSystem, 
+toStation.name as firstStopStation,
+commodity2.name as buying2Commodity, 
+sell2.sellPrice - buy2.buyPrice as hop2UnitProfit, 
+tsys2.name as secondStopSystem, 
+tsta2.name as secondsStopStationName, 
+hop1UnitProfit + (sell2.sellPrice - buy2.buyPrice) as roundTripUnitProfit
+ORDER BY roundTripUnitProfit DESC
+LIMIT 3

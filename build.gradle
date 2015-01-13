@@ -13,6 +13,7 @@ dependencies {
     compile "org.neo4j:neo4j:$neo4jVersion"
 	compile "org.springframework.shell:spring-shell:$springShellVersion"
     compile "com.google.guava:guava:$guavaVersion"
+    compile "com.fasterxml.jackson.core:jackson-databind:2.5.0"
 	testCompile "junit:junit:$junitVersion"
 	runtime "log4j:log4j:$log4jVersion"
 }

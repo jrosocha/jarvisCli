@@ -1,6 +1,8 @@
 package com.jhr.jarvis.service;
 
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.PostConstruct;
 
@@ -54,11 +56,18 @@ public class GraphDbService {
         } );
     }
     
-    
     public String runCypher(String query) {
         try (Transaction tx = graphDb.beginTx(); )
         {
             ExecutionResult result = engine.execute(query);
+            return result.dumpToString();
+        }        
+    }
+    
+    public String runCypher(String query,  Map<String, Object> params) {
+        try (Transaction tx = graphDb.beginTx(); )
+        {
+            ExecutionResult result = engine.execute(query, params);
             return result.dumpToString();
         }        
     }
