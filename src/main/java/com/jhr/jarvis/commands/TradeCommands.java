@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
+import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -38,17 +39,30 @@ public class TradeCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = { "gon", "gox" }, help = "Best rescouce exchange with n hops of your jump distance. Takes 20 seconds or so. ")
+    @CliCommand(value = { "gon", "gox" }, help = "Best resource exchange with n hops of your jump distance. Takes 20 seconds or so for --hops 3. ")
     public String gon(
-            @CliOption(key = { "start" }, mandatory = true, help = "Starting Station in CAPS") final String station,
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station,
             @CliOption(key = { "hops" }, mandatory = false, help = "Number of hops") Integer hops
         ) throws IOException {
+        
+        String usage = "usage: gon --start 'Station Name' --hops 2" 
+                        + OsUtils.LINE_SEPARATOR
+                        + "Best resource exchange within n jumps of your jump distance. Takes 20+ seconds or so for --hops 3." 
+                        + OsUtils.LINE_SEPARATOR
+                        + "or try a find '<partial station match>'."
+                        + OsUtils.LINE_SEPARATOR
+                        + "or try a ship cargo;distance;cash to set up your ship.";
+        String out = "";
+        
+        if (station == null && stationService.getFindStationUniqueResult() != null) {
+            station = stationService.getFindStationUniqueResult();
+        } else {
+            return usage;
+        }
         
         if (hops == null) {
             hops = 2;
         }
-        
-        String out = "";
         
         Ship s = shipService.loadShip();
         out += tradeService.gon(station, s, hops);
@@ -58,10 +72,23 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "go", "go1" }, help = "Single hop trading, not jumping more than one node.")
     public String go(
-            @CliOption(key = { "start" }, mandatory = true, help = "Starting Station in CAPS") final String station
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station
         ) throws IOException {
         
+        String usage = "usage: go --start 'Station Name'" 
+                + OsUtils.LINE_SEPARATOR
+                + "Single jump trading." 
+                + OsUtils.LINE_SEPARATOR
+                + "or try a find '<partial station match>'"
+                + OsUtils.LINE_SEPARATOR
+                + "or try a ship cargo;distance;cash to set up your ship.";;
         String out = "";
+        
+        if (station == null && stationService.getFindStationUniqueResult() != null) {
+            station = stationService.getFindStationUniqueResult();
+        } else {
+            return usage;
+        }
         
         Ship s = shipService.loadShip();
         out += tradeService.go(station, s);
@@ -71,28 +98,29 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = "go2", help = "2 hop trading, not jumping more than one node.")
     public String go2(
-            @CliOption(key = { "start" }, mandatory = true, help = "Starting Station in CAPS") final String station
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station
         ) throws IOException {
         
+        String usage = "usage: go --start 'Station Name'" 
+                + OsUtils.LINE_SEPARATOR
+                + "Single jump trading." 
+                + OsUtils.LINE_SEPARATOR
+                + "or try a find '<partial station match>'"
+                + OsUtils.LINE_SEPARATOR
+                + "or try a ship cargo;distance;cash to set up your ship.";;
         String out = "";
+        
+        if (station == null && stationService.getFindStationUniqueResult() != null) {
+            station = stationService.getFindStationUniqueResult();
+        } else {
+            return usage;
+        }
         
         Ship s = shipService.loadShip();
         out += tradeService.go2(station, s);
         
         return out;
     }
-    
-    @CliCommand(value = "go4", help = "2 hop trading, not jumping more than one node.")
-    public String go4(
-            @CliOption(key = { "start" }, mandatory = true, help = "Starting Station in CAPS") final String station
-        ) throws IOException {
-        
-        String out = "";
-        
-        Ship s = shipService.loadShip();
-        out += tradeService.go4(station, s);
-        
-        return out;
-    }
+
 	
 }

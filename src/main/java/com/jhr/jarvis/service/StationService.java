@@ -1,8 +1,10 @@
 package com.jhr.jarvis.service;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.ImmutableMap;
@@ -15,15 +17,32 @@ public class StationService {
 
     @Autowired
     private GraphDbService graphDbService;
+       
+    private String findStationUniqueResult = null;
     
     public String find(String partial) {
+        
         String query = "MATCH (station:Station)"
                         + " WHERE station.name=~{stationName}"
                         + " RETURN station.name";                
 
+        String out = "";
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");
         
-        String out = graphDbService.runCypher(query, cypherParams);
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
+        
+        if (results.size() == 0) {
+            out += String.format("No station found with name starting with '%s'", partial);
+        } else {
+            for (Map<String, Object> res: results) {
+                out += res.get("station.name") + OsUtils.LINE_SEPARATOR;
+            }
+        }
+        
+        if (results.size() == 1) {
+            findStationUniqueResult = (String) results.get(0).get("station.name");
+        }
+        
         return out;
     }
     
@@ -82,6 +101,20 @@ public class StationService {
         out += graphDbService.runCypherWithTransaction(createExchange, cypherParams);
         
         return out;
+    }
+    
+    /**
+     * @return the findStationUniqueResult
+     */
+    public String getFindStationUniqueResult() {
+        return findStationUniqueResult;
+    }
+
+    /**
+     * @param findStationUniqueResult the findStationUniqueResult to set
+     */
+    public void setFindStationUniqueResult(String findStationUniqueResult) {
+        this.findStationUniqueResult = findStationUniqueResult;
     }
     
 }
