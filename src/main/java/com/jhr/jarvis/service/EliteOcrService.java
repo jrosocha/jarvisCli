@@ -43,7 +43,7 @@ public class EliteOcrService {
     
     private Date lastScanned = null;
     
-    public synchronized String scanDirectory() throws IOException {
+    public synchronized String scanDirectory(boolean doArchive) throws IOException {
         
         lastScanned = new Date();
         
@@ -60,10 +60,12 @@ public class EliteOcrService {
             if (filesInOcrDir[i].isFile() && filesInOcrDir[i].getName().endsWith(".csv")) {               
                 out += processEliteOcrCSVFile(filesInOcrDir[i]);
                 // archive the read file
-                try {
-                    filesInOcrDir[i].renameTo(new File(eliteOcrArchiveDir, filesInOcrDir[i].getName()));   
-                } catch (Exception e) {
-                    e.printStackTrace();
+                if (doArchive) {
+                    try {
+                        filesInOcrDir[i].renameTo(new File(eliteOcrArchiveDir, filesInOcrDir[i].getName()));   
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
@@ -71,14 +73,14 @@ public class EliteOcrService {
         return out;
     }
 
-    @Scheduled(fixedRate = 20000)
-    private void scheduledScan() {
-        try {
-            scanDirectory();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    @Scheduled(fixedRate = 20000)
+//    private void scheduledScan() {
+//        try {
+//            scanDirectory(settings.isEliteOcrScanArchiveEnabed());
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
     
     private String processEliteOcrCSVFile(File in) throws IOException {
         

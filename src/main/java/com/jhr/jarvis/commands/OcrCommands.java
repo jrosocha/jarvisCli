@@ -31,7 +31,7 @@ public class OcrCommands implements CommandMarker {
         String out = "";
         
         if (!StringUtils.isEmpty(scan)) {
-            out += eliteOcrService.scanDirectory();
+            out += eliteOcrService.scanDirectory(settings.isEliteOcrScanArchiveEnabed());
         }
         
         if (!StringUtils.isEmpty(timestamp)) {

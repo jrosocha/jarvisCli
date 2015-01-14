@@ -14,6 +14,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class Settings {
 
+    /**
+     * @return the eliteOcrScanArchiveEnabed
+     */
+    public boolean isEliteOcrScanArchiveEnabed() {
+        return eliteOcrScanArchiveEnabed;
+    }
+
     private boolean loaded = false;
     
     private String test = null;
@@ -23,6 +30,8 @@ public class Settings {
     private String systemsFile = null;
     
     private String eliteOcrScanDirectory = null;
+    
+    private boolean eliteOcrScanArchiveEnabed = false;
     
     @PostConstruct
     public void loadSettings() throws FileNotFoundException, IOException {
@@ -48,6 +57,7 @@ public class Settings {
         graphDb = p.getProperty("neo4j");
         systemsFile = p.getProperty("systems.file.path");
         eliteOcrScanDirectory = p.getProperty("eliteocr.directory.path");
+        eliteOcrScanArchiveEnabed = Boolean.parseBoolean(p.getProperty("eliteocr.directory.archive"));
     }
     
     /* (non-Javadoc)
@@ -55,7 +65,8 @@ public class Settings {
      */
     @Override
     public String toString() {
-        return "Settings [loaded=" + loaded + ", test=" + test + ", graphDb=" + graphDb + ", systemsFile=" + systemsFile + ", eliteOcrScanDirectory=" + eliteOcrScanDirectory + "]";
+        return "Settings [loaded=" + loaded + ", test=" + test + ", graphDb=" + graphDb + ", systemsFile=" + systemsFile + ", eliteOcrScanDirectory=" + eliteOcrScanDirectory
+                + ", eliteOcrScanArchiveEnabed=" + eliteOcrScanArchiveEnabed + "]";
     }
     
     /**

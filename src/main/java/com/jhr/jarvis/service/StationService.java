@@ -1,6 +1,5 @@
 package com.jhr.jarvis.service;
 
-import java.util.Date;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +15,17 @@ public class StationService {
 
     @Autowired
     private GraphDbService graphDbService;
+    
+    public String find(String partial) {
+        String query = "MATCH (station:Station)"
+                        + " WHERE station.name=~{stationName}"
+                        + " RETURN station.name";                
+
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");
+        
+        String out = graphDbService.runCypher(query, cypherParams);
+        return out;
+    }
     
     /**
      * Creates a station and its HAS with its system is the station is not yet present in the graph.

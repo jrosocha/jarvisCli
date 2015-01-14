@@ -1,5 +1,7 @@
 package com.jhr.jarvis.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -54,6 +56,18 @@ public class GraphDbService {
                 graphDb.shutdown();
             }
         } );
+    }
+    
+    public List<Map<String, Object>> runCypherNative(String query, Map<String, Object> params) {
+        try (Transaction tx = graphDb.beginTx(); )
+        {
+            ExecutionResult result = engine.execute(query, params);
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Map<String, Object> row: result) {
+                out.add(row);
+            }
+            return out;
+        }        
     }
     
     public String runCypher(String query) {
