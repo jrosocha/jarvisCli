@@ -1,5 +1,6 @@
 package com.jhr.jarvis.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +79,7 @@ public class StationService {
         return out; 
     }
     
-    public String createCommodityExchangeRelationship(Station s, Commodity c, int sellPrice, int buyPrice, int supply) {
+    public String createCommodityExchangeRelationship(Station s, Commodity c, int sellPrice, int buyPrice, int supply, long date) {
         
         String out = "";
         
@@ -92,13 +93,21 @@ public class StationService {
         out += graphDbService.runCypherWithTransaction(deleteExchangeQuery, cypherParams);
         
         // add new exchange data
-        cypherParams = ImmutableMap.of("stationName", s.getName(), "commodityName", c.getName(), "sellPrice", sellPrice, "buyPrice", buyPrice, "supply", supply);
+        // add new exchange data
+        Map<String, Object> cypherParams2 = new HashMap<>();
+        cypherParams2.put("stationName", s.getName());
+        cypherParams2.put("commodityName", c.getName());
+        cypherParams2.put("sellPrice", sellPrice);
+        cypherParams2.put("buyPrice", buyPrice);
+        cypherParams2.put("supply", supply);
+        cypherParams2.put("date", date);
+        
         //, sellPrice, "buyPrice", buyPrice, "supply", supply, "createdOn", createdOn.getTime());
         String createExchange = "MATCH (station:Station), (commodity:Commodity) " +
                                 "WHERE station.name = {stationName} " + 
                                 "AND commodity.name = {commodityName} " + 
-                                "MERGE (station)-[exchange:EXCHANGE{buyPrice:{buyPrice}, sellPrice:{sellPrice}, supply:{supply}}]->(commodity);";
-        out += graphDbService.runCypherWithTransaction(createExchange, cypherParams);
+                                "MERGE (station)-[exchange:EXCHANGE{buyPrice:{buyPrice}, sellPrice:{sellPrice}, supply:{supply}, date:{date}}]->(commodity);";
+        out += graphDbService.runCypherWithTransaction(createExchange, cypherParams2);
         
         return out;
     }

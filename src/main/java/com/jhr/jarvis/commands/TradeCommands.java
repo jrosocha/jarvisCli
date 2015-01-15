@@ -31,7 +31,7 @@ public class TradeCommands implements CommandMarker {
     @Autowired
     private Settings settings;
 	
-    @CliCommand(value = { "find", "f" }, help = "Find the station starting with the crap you typed.")
+    @CliCommand(value = { "find", "f" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
     public String find(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
         String out = "";
@@ -39,15 +39,15 @@ public class TradeCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = { "gon", "gox" }, help = "Best resource exchange with n hops of your jump distance. Takes 20 seconds or so for --hops 3. ")
+    @CliCommand(value = { "gon", "gox" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
     public String gon(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station,
-            @CliOption(key = { "hops" }, mandatory = false, help = "Number of hops") Integer hops
+            @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") Integer jumps
         ) throws IOException {
         
-        String usage = "usage: gon --start 'Station Name' --hops 2" 
+        String usage = "usage: gon --start 'Station Name' --jumps 2" 
                         + OsUtils.LINE_SEPARATOR
-                        + "Best resource exchange within n jumps of your jump distance. Takes 20+ seconds or so for --hops 3." 
+                        + "Best resource exchange within n jumps of your jump distance. Takes 20+ seconds or so for --jumps 3." 
                         + OsUtils.LINE_SEPARATOR
                         + "or try a find '<partial station match>'."
                         + OsUtils.LINE_SEPARATOR
@@ -60,19 +60,50 @@ public class TradeCommands implements CommandMarker {
             return usage;
         }
         
-        if (hops == null) {
-            hops = 2;
+        if (jumps == null) {
+            jumps = 2;
         }
         
         Ship s = shipService.loadShip();
-        out += tradeService.gon(station, s, hops);
+        out += tradeService.gon(station, s, jumps);
         
         return out;
     }
     
-    @CliCommand(value = { "go", "go1" }, help = "Single hop trading, not jumping more than one node.")
+    @CliCommand(value = { "go2n", "go2x" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with 1..n jumps of your jump distance. Takes 30 seconds or so for --jumps 3. ")
+    public String go2n(
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station,
+            @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") Integer jumps
+        ) throws IOException {
+        
+        String usage = "usage: gon --start 'Station Name' --jumps 2" 
+                        + OsUtils.LINE_SEPARATOR
+                        + "Best resource exchange within 1..n jumps of your jump distance. Takes 20+ seconds or so for --jumps 3." 
+                        + OsUtils.LINE_SEPARATOR
+                        + "or try a find '<partial station match>'."
+                        + OsUtils.LINE_SEPARATOR
+                        + "or try a ship cargo;distance;cash to set up your ship.";
+        String out = "";
+        
+        if (station == null && stationService.getFindStationUniqueResult() != null) {
+            station = stationService.getFindStationUniqueResult();
+        } else {
+            return usage;
+        }
+        
+        if (jumps == null) {
+            jumps = 2;
+        }
+        
+        Ship s = shipService.loadShip();
+        out += tradeService.gon2(station, s, jumps);
+        
+        return out;
+    }
+    
+    @CliCommand(value = { "go", "go1" }, help = "usage: go --start 'Station Name' \n Single jump trading, not jumping more than one node.")
     public String go(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station
+            @CliOption(key = { "start" }, mandatory = false, help = "--start Starting Station in CAPS") String station
         ) throws IOException {
         
         String usage = "usage: go --start 'Station Name'" 
@@ -96,7 +127,7 @@ public class TradeCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = "go2", help = "2 hop trading, not jumping more than one node.")
+    @CliCommand(value = "go2", help = "usage: go --start 'Station Name' \n 2 stop trading, not jumping more than one system.")
     public String go2(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") String station
         ) throws IOException {

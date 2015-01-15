@@ -22,10 +22,10 @@ public class OcrCommands implements CommandMarker {
     @Autowired
     private EliteOcrService eliteOcrService;
 	
-    @CliCommand(value = "ocr", help = "Functions related to Elite OCR.")
+    @CliCommand(value = "ocr", help = "usage: ocr --scan \n Scans your Elite OCR directory for more CSV files.")
     public String ocrCommands(
-        @CliOption(key = { "scan" }, mandatory = false, specifiedDefaultValue = "true", help = "Recans the Elite OCR dir for files") final String scan,
-        @CliOption(key = { "last" }, mandatory = false, specifiedDefaultValue = "true", help = "Provides the last scanned timestamp") final String timestamp
+        @CliOption(key = { "scan" }, mandatory = false, specifiedDefaultValue = "true", help = "--scan Recans the Elite OCR dir for files") final String scan,
+        @CliOption(key = { "last" }, mandatory = false, specifiedDefaultValue = "true", help = "--last Provides the last scanned timestamp") final String timestamp
         ) throws IOException {
     
         String out = "";

@@ -60,7 +60,7 @@ public class TradeService {
     }
     
     /**
-     * runs the 1 hop from where you are search, providing 5 best options
+     * provides a 2 stop trade solution for systems that are one jump apart
      * 
      * @throws JsonParseException
      * @throws JsonMappingException
@@ -164,5 +164,54 @@ public class TradeService {
         
         return graphDbService.runCypher(query, cypherParams); 
     }
+    
+    /**
+     * provides a 2 stop trade solution for systems that are 1..n jumps apart
+     * 
+     * @throws JsonParseException
+     * @throws JsonMappingException
+     * @throws IOException
+     */
+    public String gon2(String fromStation, Ship s, int jumps) throws JsonParseException, JsonMappingException, IOException {
+
+        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
+        String query = 
+        "MATCH (commodity)-[sell:EXCHANGE]-(fSta:Station)-[:HAS]-(fSys:System)-[shift:FRAMESHIFT*1.."+ jumps +"]-(tSys:System)-[:HAS]-(tSta:Station)-[buy:EXCHANGE]-(commodity)"
+        + " WHERE fSta.name={fromStation}"
+        + " AND ALL(x IN shift WHERE x.ly <= {distance})"
+        + " AND sell.sellPrice > 0"
+        + " AND sell.supply > {cargo}"
+        + " AND {cash} - (sell.sellPrice * {cargo}) > 0"
+        + " AND buy.buyPrice > 0"
+        + " AND buy.buyPrice > sell.sellPrice"
+        + " WITH fSys as fromSystem,"
+        + " fSta as fromStation," 
+        + " tSta as toStation," 
+        + " tSys as toSystem," 
+        + " commodity as hop1Commodity," 
+        + " (buy.buyPrice * {cargo}) - (sell.sellPrice * {cargo}) as profit1" 
+        + " MATCH (commodity2)-[sell2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT*1.."+ jumps +"]-(tSys2:System)-[:HAS]-(tSta2:Station)-[buy2:EXCHANGE]-(commodity2)"
+        + " WHERE sell2.sellPrice > 0"
+        + " AND ALL(x IN shift2 WHERE x.ly <= {distance})"
+        + " AND {cash} - (sell2.sellPrice * {cargo}) > 0"
+        + " and sell2.supply > {cargo}"
+        + " and buy2.buyPrice > 0"
+        + " and buy2.buyPrice > sell2.sellPrice"
+        + " RETURN DISTINCT"
+        + " hop1Commodity.name as `COMMODITY 1`,"
+        + " profit1 as `PROFIT 1`,"
+        + " toSystem.name as `SYSTEM 1`," 
+        + " toStation.name as `STATION 1`,"
+        + " commodity2.name as `COMMODITY 2`," 
+        + " (buy2.buyPrice * {cargo}) - (sell2.sellPrice * {cargo}) as `PROFIT 2`," 
+        + " tSys2.name as `SYSTEM 2`," 
+        + " tSta2.name as `STATION 2`," 
+        + " profit1 + ((buy2.buyPrice * {cargo}) - (sell2.sellPrice * {cargo})) as `TRIP PROFIT`"
+        + " ORDER BY `TRIP PROFIT` DESC"
+        + " LIMIT 5";
+        
+        return graphDbService.runCypher(query, cypherParams);
+    }
+
     
 }

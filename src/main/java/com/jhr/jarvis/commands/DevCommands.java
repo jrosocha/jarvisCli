@@ -29,7 +29,7 @@ public class DevCommands implements CommandMarker {
     @Autowired
     private Settings settings;
     
-	@CliCommand(value = "dev", help = "Does dev stuff.")
+	@CliCommand(value = "dev", help = "Dont mess with this.")
 	public String loadSystemsToMemory(
 		@CliOption(key = { "reload" }, mandatory = false, specifiedDefaultValue="true", help = "reload Systems.csv file.") final String reload,
 	    @CliOption(key = { "get" }, mandatory = false, help = "Return data system from Systems.csv") final String get,

@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -121,12 +123,28 @@ public class EliteOcrService {
                 int buyPrice = StringUtils.isEmpty(splitLine[3]) ? 0 : Integer.parseInt(splitLine[3]);
                 int sellPrice = StringUtils.isEmpty(splitLine[4]) ? 0 : Integer.parseInt(splitLine[4]);
                 int supply = StringUtils.isEmpty(splitLine[7]) ? 0 : Integer.parseInt(splitLine[7]);
+                long date = StringUtils.isEmpty(splitLine[9]) ? 0 : parseCSVDateFormat(splitLine[9]).getTime();
                                    
-                out += stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply);
+                out += stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply, date);
             }
         }
         
         return out;
     };
+    
+    private static final SimpleDateFormat FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+    private Date parseCSVDateFormat(String date) {
+        //2015-01-03T19:10:25+00:00
+        try {
+            return FORMAT.parse(date);
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return new Date();
+        
+    }
+    
+    
     
 }

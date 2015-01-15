@@ -26,41 +26,10 @@ public class ShipCommands implements CommandMarker {
     
     @Autowired
     private Settings settings;
-	
-//    @CliCommand(value = "ship", help = "Functions related to setting ship defaults for trading.")
-//    public String ocrCommands(
-//        @CliOption(key = { "status" }, mandatory = false, specifiedDefaultValue = "true", help = "Prints your ship") final String status,
-//        @CliOption(key = { "save" }, mandatory = false, help = "Save your ship. Format = cargo(int);distance(float);cash(int)") final String save
-//        ) throws IOException {
-//        
-//        String out = "";
-//        
-//        if (!StringUtils.isEmpty(status)) {       
-//            Ship ship = shipService.loadShip();
-//            out += ship;
-//        }
-//        
-//        if (!StringUtils.isEmpty(save)) {       
-//            try {
-//                String[] shipParts = save.split(";");
-//                Ship ship = new Ship(Integer.parseInt(shipParts[0]), Float.parseFloat(shipParts[1]), Integer.parseInt(shipParts[2]));
-//                ship = shipService.saveShip(ship);
-//                out += ship;
-//            } catch (Exception e) {
-//                out += "Error saving ship, format: cargo(int);distance(float);cash(int)";
-//            }
-//        }
-//        
-//        if (StringUtils.isEmpty(out)) {
-//            out += "format: cargo(int);distance(float);cash(int)" + OsUtils.LINE_SEPARATOR + shipService.loadShip();
-//        }
-//        
-//        return out;
-//    }
     
-    @CliCommand(value = "ship", help = "dont know")
+    @CliCommand(value = "ship", help = "usage: ship cargo;distance;cash \n Saves your ship for future commands.")
     public String obtainHelp(
-            @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
+            @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "cargo;distance;cash") String buffer) {
         
         String out = "";
         try {
@@ -70,7 +39,7 @@ public class ShipCommands implements CommandMarker {
             out += ship;
         } catch (Exception e) {
             try {
-                out += "format: ship cargo(int);distance(float);cash(int)" + OsUtils.LINE_SEPARATOR + shipService.loadShip();
+                out += "usage: ship cargo;distance;cash" + OsUtils.LINE_SEPARATOR + shipService.loadShip();
             } catch (JsonParseException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
