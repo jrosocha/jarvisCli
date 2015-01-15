@@ -18,10 +18,24 @@ Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 
 * cd ../bin (or build/install/jarvis/bin for those of you who are lost)
 
-* run jarvis
-
-Jarvis will scan your OCR directory on a 30 second interval. 
-You can force Jarvis to scan by typing 'ocr --scan' 
-Jarvis will move the scanned csv files to a folder in your OCR dir named archive.
+* run jarvis (or jarvis.bat)
 
 Typing tab will provide some help.
+Tying help <command> hill help more.
+
+A good list of things to do:
+
+ship 44;10;1000000  (Really ship your-cargo-rooom;your-jump-distance;cash-on-hand)
+
+ocr --scan ( scans a configured directory for .csv files in that Elite OCR format, and pushes them to an archive folder) 
+
+find goo ( or find the first few letters of any station you know. pin it down to one station)
+
+go (this will compute a 1 jump trade)
+
+go2 (computes a 2 stop within 1 jump of each other trade)
+
+gon --jump 2 (computes a one one stop trade within 2 jumps of your starting system)
+
+go2n --jump 2 (computes a 2 stop trade within 2 jumps of each stop .. 3 or more makes this unusably slow, around 20 minutes. 2 should return in 20-30 seconds)
+
