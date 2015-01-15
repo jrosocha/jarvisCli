@@ -4,12 +4,11 @@ Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 * Install Elite:Dangerous .. or all of this will really be boring
 * Install EliteOCR and learn how to use it. This CLI uses the csv exports. Mind what directory they get written to.
 
-* Install Gradle. It is the build tool this app uses.
 * Install Java 8. Its is the language this app uses.
 
 * clone the git project from https://github.com/jrosocha/jarvis.git
 * cd to the cloned directory
-* run gradle
+* run gradle2 or gradlew.bat
 
 * cd build/install/jarvis/data
 * edit jarvis.properties. Change the line that reads like below to point to where yourElite OCR created .csv files go.
