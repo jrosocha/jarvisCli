@@ -8,7 +8,6 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.service.StationService;
