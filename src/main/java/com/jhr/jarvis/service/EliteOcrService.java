@@ -113,7 +113,7 @@ public class EliteOcrService {
                     }
                     
                     currentSystem = matchingSystems.get(0);
-                    Set<StarSystem> closeSystems = starSystemService.closeStarSystems(currentSystem, 10);
+                    Set<StarSystem> closeSystems = starSystemService.closeStarSystems(currentSystem, settings.getCloseSystemDistance());
                     closeSystems.add(currentSystem);
 
                     for (StarSystem system: closeSystems) {

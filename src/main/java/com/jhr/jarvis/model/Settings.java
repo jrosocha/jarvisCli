@@ -30,6 +30,8 @@ public class Settings {
     
     private int longestDistanceEdge = 25;
     
+    private int closeSystemDistance = 10;
+    
     @JsonIgnore
     @Autowired
     private ObjectMapper objectMapper;
@@ -138,5 +140,19 @@ public class Settings {
      */
     public void setLongestDistanceEdge(int longestDistanceEdge) {
         this.longestDistanceEdge = longestDistanceEdge;
+    }
+
+    /**
+     * @return the closeSystemDistance
+     */
+    public int getCloseSystemDistance() {
+        return closeSystemDistance;
+    }
+
+    /**
+     * @param closeSystemDistance the closeSystemDistance to set
+     */
+    public void setCloseSystemDistance(int closeSystemDistance) {
+        this.closeSystemDistance = closeSystemDistance;
     }
 }

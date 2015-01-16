@@ -90,9 +90,12 @@ public class StarSystemService {
      */
     public String createLyEdgesForSystem(StarSystem system) {
         Map<String, Object> cypherParams = ImmutableMap.of("name", system.getName(), "x", system.getX(), "y", system.getY(), "z", system.getZ(), "edgeMaxDistance", settings.getLongestDistanceEdge());
+        /*
+         * The FOREACH madness is a hacky IF this condition is not met, don't run the create FRAMESHIFT edge
+         */
         String query = "MATCH (t:System), (f:System {name:{name}, pos_x:{x}, pos_y:{y}, pos_z:{z}}) " +
                        "WHERE t.name<>f.name AND NOT (t)-[:FRAMESHIFT]-(f) " +
-                       "FOREACH(ignoreMe IN CASE WHEN sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= {edgeMaxDistance} THEN [1] ELSE [] END | " +
+                       "FOREACH (ignoreMe IN CASE WHEN sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= {edgeMaxDistance} THEN [1] ELSE [] END | " +
                        "MERGE (f)-[:FRAMESHIFT { ly: sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2))}]->(t));";
         String out = graphDbService.runCypherWithTransaction(query, cypherParams);
         return out;
