@@ -108,32 +108,6 @@ public class TradeService {
         return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
     }
     
-    
-    public String go4(String fromStation, Ship s) throws JsonParseException, JsonMappingException, IOException {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)-[sell:EXCHANGE]-(fromStation:Station)-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT]-(toSystem:System)-[:HAS]-(toStation:Station)-[buy:EXCHANGE]-(commodity)" 
-            + " WHERE fromStation.name={fromStation}"
-            + " AND shift.ly <= {distance}"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.supply >= {cargo}"
-            + " AND {cash} - (sell.sellPrice * {cargo}) > 0"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.buyPrice > sell.sellPrice"
-            + " RETURN DISTINCT" 
-            + " fromStation.name as `FROM STATION`," 
-            + " toStation.name as `TO STATION`," 
-            + " toSystem.name as `TO SYSTEM`," 
-            + " commodity.name as `COMMODITY`," 
-            + " (buy.buyPrice - sell.sellPrice) as `PER UNIT PROFIT`,"
-            + " (sell.sellPrice * {cargo}) as `CARGO COST`,"
-            + " (buy.buyPrice * {cargo}) as `CARGO SOLD FOR`,"
-            + " (buy.buyPrice * {cargo}) - (sell.sellPrice * {cargo}) as `CARGO PROFIT`"
-            + " ORDER BY `CARGO PROFIT` DESC"
-            + " LIMIT 5 ";   
-        
-        return objectMapper.writeValueAsString(graphDbService.runCypherNative(query, cypherParams)) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";   
-    }
 
     public String gon(String fromStation, Ship s, int hops) {
         Date start = new Date();
@@ -284,6 +258,32 @@ public class TradeService {
             + " ORDER BY `UNIT PRICE` DESC"
             + " LIMIT 5 ";   
 
+        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+    }
+    
+    public String stationToStation(String fromStation, Ship s, String toStation) {
+        Date start = new Date();
+        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash(), "toStation", toStation);
+        String query = "MATCH (commodity)<-[sell:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System),(toSystem:System)-[:HAS]->(toStation:Station)-[buy:EXCHANGE]->(commodity)" 
+            + " WHERE fromStation.name={fromStation}"
+            + " AND toStation.name={toStation}"
+            + " AND sell.sellPrice > 0"
+            + " AND sell.supply >= {cargo}"
+            + " AND {cash} - (sell.sellPrice * {cargo}) > 0"
+            + " AND buy.buyPrice > 0"
+            + " AND buy.buyPrice > sell.sellPrice"
+            + " RETURN DISTINCT" 
+            + " fromStation.name as `FROM STATION`," 
+            + " toStation.name as `TO STATION`," 
+            + " toSystem.name as `TO SYSTEM`," 
+            + " commodity.name as `COMMODITY`," 
+            + " (buy.buyPrice - sell.sellPrice) as `PER UNIT PROFIT`,"
+            + " (sell.sellPrice * {cargo}) as `CARGO COST`,"
+            + " (buy.buyPrice * {cargo}) as `CARGO SOLD FOR`,"
+            + " (buy.buyPrice * {cargo}) - (sell.sellPrice * {cargo}) as `CARGO PROFIT`"
+            + " ORDER BY `CARGO PROFIT` DESC"
+            + " LIMIT 5 ";   
+        
         return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
     }
     

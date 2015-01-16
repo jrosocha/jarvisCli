@@ -41,7 +41,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "gon", "gox" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
     public String gon(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") final String station,
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
         ) {
         
@@ -86,7 +86,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "go2n", "go2x" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with 1..n jumps of your jump distance. Takes 30 seconds or so for --jumps 3. ")
     public String go2n(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") final String station,
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
         ) {
         
@@ -136,7 +136,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "go", "go1" }, help = "usage: go --start 'Station Name' \n Single jump trading, not jumping more than one node.")
     public String go(
-            @CliOption(key = { "start" }, mandatory = false, help = "--start Starting Station in CAPS") final String station
+            @CliOption(key = { "start" }, mandatory = false, help = "--start Starting Station") final String station
         ) {
         
         String usage = "usage: go --start 'Station Name'" 
@@ -180,7 +180,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = "go2", help = "usage: go --start 'Station Name' \n 2 stop trading, not jumping more than one system.")
     public String go2(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") final String station
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station
         ) {
         
         String usage = "usage: go --start 'Station Name'" 
@@ -224,7 +224,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "sell" }, help = "usage: sell --start 'Station Name' --jumps 2 --commodity 'GOLD' \n Best resource sell price with n jumps of your jump distance.")
     public String sell(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") final String station,
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps,
             @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
         ) {
@@ -273,7 +273,7 @@ public class TradeCommands implements CommandMarker {
     
     @CliCommand(value = { "buy" }, help = "usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD' \n Best resource buy price with n jumps of your jump distance.")
     public String buy(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station in CAPS") final String station,
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps,
             @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
         ) {
@@ -319,7 +319,49 @@ public class TradeCommands implements CommandMarker {
         out += tradeService.buy(foundStation, ship, jumpDistance, foundCommodity);
         return out;
     }
-    
+ 
+    @CliCommand(value = { "gos" }, help = "usage: go --start 'Station Name' --to 'Station Name'")
+    public String goStation(
+            @CliOption(key = { "start" }, mandatory = false, help = "--start 'Starting Station'") final String station,
+            @CliOption(key = { "to" }, mandatory = true, help = "--to 'Target Station'") final String toStation
+        ) {
+        
+        String usage = "usage: go --start 'Station Name' --to 'Station Name'" 
+                + OsUtils.LINE_SEPARATOR
+                + "Best commodity exchange between 2 stations non stop." 
+                + OsUtils.LINE_SEPARATOR
+                + "or try a find '<partial station match>'"
+                + OsUtils.LINE_SEPARATOR
+                + "or try a ship cargo;distance;cash to set up your ship.";;
+        
+        String out = "";
+        String foundStation;
+        String foundStation2;
+        try {
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
+            foundStation2 = stationService.findUniqueStation(toStation, false);
+        } catch (StationNotFoundException e) {
+            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+        
+        Ship ship;
+        try {
+            ship = shipService.loadShip();
+        } catch (IOException e) {
+            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+            return out;
+        }
+        
+        out += tradeService.stationToStation(foundStation, ship, foundStation2);
+        return out;
+    }
+
     
 
 

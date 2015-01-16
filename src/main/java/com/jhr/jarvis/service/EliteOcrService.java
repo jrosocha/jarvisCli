@@ -93,6 +93,7 @@ public class EliteOcrService {
         int exchanges = 0;
         
         Date start = new Date();
+        boolean clearedStationExistingExchanges = false;
         
         try (BufferedReader br = new BufferedReader(new FileReader(in))) {
             String line;
@@ -133,6 +134,11 @@ public class EliteOcrService {
                 Commodity currentCommodity = new Commodity(splitLine[2].toUpperCase());
                 commodities++;
                 stationService.createCommodityIfNotExists(currentCommodity);
+                
+                if (!clearedStationExistingExchanges) {
+                    stationService.clearStationOfExchanges(currentStation);
+                    clearedStationExistingExchanges = true;
+                }
                 
                 int buyPrice = StringUtils.isEmpty(splitLine[3]) ? 0 : Integer.parseInt(splitLine[3]);
                 int sellPrice = StringUtils.isEmpty(splitLine[4]) ? 0 : Integer.parseInt(splitLine[4]);

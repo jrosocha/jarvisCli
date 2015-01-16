@@ -23,25 +23,11 @@ public class OcrCommands implements CommandMarker {
     private EliteOcrService eliteOcrService;
 	
     @CliCommand(value = "ocr", help = "usage: ocr --scan \n Scans your Elite OCR directory for more CSV files.")
-    public String ocrCommands(
-        @CliOption(key = { "scan" }, mandatory = false, specifiedDefaultValue = "true", help = "--scan Recans the Elite OCR dir for files") final String scan,
-        @CliOption(key = { "last" }, mandatory = false, specifiedDefaultValue = "true", help = "--last Provides the last scanned timestamp") final String timestamp
-        ) throws IOException {
+    public String ocrCommands() throws IOException {
     
         String out = "";
-        
-        if (!StringUtils.isEmpty(scan)) {
-            out += eliteOcrService.scanDirectory(settings.isEliteOcrScanArchiveEnabed());
-        }
-        
-        if (!StringUtils.isEmpty(timestamp)) {
-            out += eliteOcrService.getLastScanned();
-        }
-        
-        if (out.isEmpty()) {
-            out += "Scans a directory for Elite OCR export csv, and then moves them to an archive dir." + OsUtils.LINE_SEPARATOR + "usage: ocr [--scan|--last]";
-        }
-        
+        System.out.println("Is archive enabled: " + settings.isEliteOcrScanArchiveEnabed());
+        out += eliteOcrService.scanDirectory(settings.isEliteOcrScanArchiveEnabed());
         return out;
     }
 	

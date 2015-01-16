@@ -36,7 +36,7 @@ public class StationService {
         if (station == null && getUserLastStoredStation() != null) {
             return getUserLastStoredStation();
         } else if (!StringUtils.isEmpty(station)) {
-            return findUniqueStation(station);            
+            return findUniqueStation(station, true);            
         }
         
         throw new StationNotFoundException("No unique station could be found.");
@@ -50,7 +50,7 @@ public class StationService {
      * @return
      * @throws Exception
      */
-    public String findUniqueStation(String partial) throws StationNotFoundException {
+    public String findUniqueStation(String partial, boolean loadIntoMemory) throws StationNotFoundException {
         
         String foundStation = null;
         boolean found = false;
@@ -76,7 +76,9 @@ public class StationService {
             
             foundStation = (String) results.get(0).get("station.name");
         }
-        userLastStoredStation = foundStation; 
+        if (loadIntoMemory) {
+            userLastStoredStation = foundStation; 
+        }
         return foundStation;
     }
  
@@ -173,18 +175,30 @@ public class StationService {
         return out; 
     }
     
+    /**
+     * Deletes all [:EXCHANGE] edges from a station
+     * @param s
+     * @return
+     */
+    public String clearStationOfExchanges(Station s) {
+        
+        String query = "MATCH (station:Station)-[e:EXCHANGE]->(:Commodity) WHERE station.name = {stationName} DELETE e;";
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", s.getName());
+        return graphDbService.runCypherWithTransaction(query, cypherParams);
+    }
+    
     public String createCommodityExchangeRelationship(Station s, Commodity c, int sellPrice, int buyPrice, int supply, long date) {
         
         String out = "";
         
         // delete old exchange data
-        Map<String, Object> cypherParams = ImmutableMap.of("stationName", s.getName(), "commodityName", c.getName());
-        String deleteExchangeQuery = "MATCH (station:Station)-[e:EXCHANGE]->(commodity:Commodity) " +
-                        "WHERE station.name = {stationName} " + 
-                        "AND commodity.name = {commodityName} " + 
-                        "DELETE e";
-        
-        out += graphDbService.runCypherWithTransaction(deleteExchangeQuery, cypherParams);
+//        Map<String, Object> cypherParams = ImmutableMap.of("stationName", s.getName(), "commodityName", c.getName());
+//        String deleteExchangeQuery = "MATCH (station:Station)-[e:EXCHANGE]->(commodity:Commodity) " +
+//                        "WHERE station.name = {stationName} " + 
+//                        "AND commodity.name = {commodityName} " + 
+//                        "DELETE e";
+//        
+//        out += graphDbService.runCypherWithTransaction(deleteExchangeQuery, cypherParams);
         
         // add new exchange data
         // add new exchange data

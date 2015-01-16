@@ -155,4 +155,11 @@ public class Settings {
     public void setCloseSystemDistance(int closeSystemDistance) {
         this.closeSystemDistance = closeSystemDistance;
     }
+
+    /**
+     * @param eliteOcrScanArchiveEnabed the eliteOcrScanArchiveEnabed to set
+     */
+    public void setEliteOcrScanArchiveEnabed(boolean eliteOcrScanArchiveEnabed) {
+        this.eliteOcrScanArchiveEnabed = eliteOcrScanArchiveEnabed;
+    }
 }
