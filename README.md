@@ -3,9 +3,10 @@ Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 
 This is a learning exercise for Neo4j and spring-shell in Java. If you like these kinds of things, feel free to pull and contribute. If you are a Neo4j expert, man I need some advice, because this this is awful slow around the [:FRAMESHIFT] edge.
 
-Anyways the DB looks like this
+Anyways the DB looks like this:
+```
 (:System)-[:FRAMESHIFY{ly:float}]-(:System)-[](:Station)-[:EXCHANGE{buyPrice:int, sellPrice:int, supply:int}]->(:Commodity)
-
+```
 
 * Install Elite:Dangerous .. or all of this will really be boring
 * Install EliteOCR and learn how to use it. This CLI uses the csv exports. Mind what directory they get written to.
