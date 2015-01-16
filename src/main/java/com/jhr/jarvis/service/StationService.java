@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.support.util.OsUtils;
+import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.ImmutableMap;
@@ -21,6 +22,25 @@ public class StationService {
     private GraphDbService graphDbService;
        
     private String userLastStoredStation = null;
+    
+    /**
+     * Gives an exact match on the station passed in, the unique station found matching what was passed in, the in memory store of a station of nothing was passed in, or an exception.
+     * 
+     * @param station
+     * @param usage
+     * @return
+     * @throws StationNotFoundException
+     */
+    public String getBestMatchingStationOrStoredStation(String station) throws StationNotFoundException {
+        
+        if (station == null && getUserLastStoredStation() != null) {
+            return getUserLastStoredStation();
+        } else if (!StringUtils.isEmpty(station)) {
+            return findUniqueStation(station);            
+        }
+        
+        throw new StationNotFoundException("No unique station could be found.");
+    }
     
     /**
      * Runs an exact match and a partial match looking to identify a single station.
@@ -184,6 +204,17 @@ public class StationService {
         out += graphDbService.runCypherWithTransaction(createExchange, cypherParams2);
         
         return out;
+    }
+    
+    public String stationDetails(String stationName) {
+        
+        String query = "MATCH (system:System)-[:HAS]->(station:Station)-[ex:EXCHANGE]->(commodity:Commodity)"
+                     + "WHERE station.name = {stationName} "
+                     + "RETURN system.name AS `SYSTEM`, station.name AS `STATION`, commodity.name AS `COMMODITY`, ex.buyPrice AS `BUY @`, ex.sellPrice AS `SELL @`, ex.supply AS `SUPPLY`, ((timestamp() - ex.date)/1000.0/60.0/60.0/24.0) AS `DAYS OLD`";
+        
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
+        return graphDbService.runCypher(query, cypherParams);
+
     }
     
     /**

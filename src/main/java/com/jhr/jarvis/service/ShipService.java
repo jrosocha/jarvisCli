@@ -29,6 +29,13 @@ public class ShipService {
     
     private File shipFile = new File("../data/ship");
     
+    public boolean isShipEmpty(Ship ship) {
+        if (ship == null || ship.getCargoSpace() == 0 || ship.getCash() == 0 || ship.getJumpDistance() == 0) {
+            return true;
+        }
+        return false;
+    }
+    
     public Ship saveShip(Ship ship) throws JsonGenerationException, JsonMappingException, IOException {
         
         if (shipFile.exists()) {

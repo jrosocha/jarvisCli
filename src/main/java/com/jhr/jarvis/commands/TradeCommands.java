@@ -37,21 +37,7 @@ public class TradeCommands implements CommandMarker {
     @Autowired
     private Settings settings;
     
-    @CliCommand(value = { "find", "f" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
-    public String find(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
-        
-        String usage = "usage: find <partal station name>" 
-                + OsUtils.LINE_SEPARATOR
-                + "Identifies stations starting with user input. If a single system is returned, it is stored for future trade commands.";
-        
-        if (StringUtils.isEmpty(buffer)) {
-            return usage;
-        }
-        
-        String out = "";
-        out += stationService.findStation(buffer);
-        return out;
-    }
+
     
     @CliCommand(value = { "gon", "gox" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
     public String gon(
@@ -69,7 +55,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -87,6 +73,12 @@ public class TradeCommands implements CommandMarker {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
         }
+        
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+            return out;
+        }
+        
         out += tradeService.gon(foundStation, ship, jumpDistance);
         
         return out;
@@ -109,7 +101,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -125,6 +117,11 @@ public class TradeCommands implements CommandMarker {
             ship = shipService.loadShip();
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
             return out;
         }
         
@@ -153,7 +150,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -164,6 +161,11 @@ public class TradeCommands implements CommandMarker {
             ship = shipService.loadShip();
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
             return out;
         }
         
@@ -192,7 +194,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -203,6 +205,11 @@ public class TradeCommands implements CommandMarker {
             ship = shipService.loadShip();
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
             return out;
         }
                 
@@ -228,7 +235,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -252,6 +259,11 @@ public class TradeCommands implements CommandMarker {
             ship = shipService.loadShip();
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
             return out;
         }
         
@@ -272,7 +284,7 @@ public class TradeCommands implements CommandMarker {
         String out = "";
         String foundStation;
         try {
-            foundStation = getBestMatchingStationOrStoredStation(station);
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
             return out;
@@ -299,29 +311,17 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
+        if (shipService.isShipEmpty(ship)) {
+            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+            return out;
+        }
+        
         out += tradeService.buy(foundStation, ship, jumpDistance, foundCommodity);
         return out;
     }
     
     
-    /**
-     * Gives an exact match on the station passed in, the unique station found matching what was passed in, the in memory store of a station of nothing was passed in, or an exception.
-     * 
-     * @param station
-     * @param usage
-     * @return
-     * @throws StationNotFoundException
-     */
-    protected String getBestMatchingStationOrStoredStation(String station) throws StationNotFoundException {
-        
-        if (station == null && stationService.getUserLastStoredStation() != null) {
-            return stationService.getUserLastStoredStation();
-        } else if (!StringUtils.isEmpty(station)) {
-            return stationService.findUniqueStation(station);            
-        }
-        
-        throw new StationNotFoundException("No unique station could be found.");
-    }
+
 
     protected String getBestMatchingCommodityOrStoredCommodity(String commodity) throws CommodityNotFoundException {
         
