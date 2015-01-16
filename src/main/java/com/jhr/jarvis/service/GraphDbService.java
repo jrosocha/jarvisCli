@@ -3,8 +3,6 @@ package com.jhr.jarvis.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.annotation.PostConstruct;
 
@@ -15,6 +13,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
 import com.jhr.jarvis.model.Settings;
@@ -37,10 +36,15 @@ public class GraphDbService {
         .setConfig( GraphDatabaseSettings.nodestore_mapped_memory_size, "10M" )
         .setConfig( GraphDatabaseSettings.string_block_size, "60" )
         .setConfig( GraphDatabaseSettings.array_block_size, "300" )
+        .setConfig( GraphDatabaseSettings.node_keys_indexable, "name" )
+        .setConfig( GraphDatabaseSettings.relationship_keys_indexable, "ly,buyPrice,sellPrice,supply" )
+        .setConfig( GraphDatabaseSettings.node_auto_indexing, "true" )
+        .setConfig( GraphDatabaseSettings.relationship_auto_indexing, "true" )
         .newGraphDatabase();
         
         registerShutdownHook(graphDb);
         engine = new ExecutionEngine(graphDb);
+
     }
     
     private void registerShutdownHook(final GraphDatabaseService graphDb)
@@ -86,12 +90,21 @@ public class GraphDbService {
         }        
     }
     
+    public String runCypherWithTransaction(String query) {
+        try (Transaction tx = graphDb.beginTx(); )
+        {
+            ExecutionResult result = engine.execute(query);
+            tx.success();
+            return result.dumpToString() + OsUtils.LINE_SEPARATOR + result.getQueryStatistics().toString();
+        }        
+    }
+    
     public String runCypherWithTransaction(String query, Map<String, Object> params) {
         try (Transaction tx = graphDb.beginTx(); )
         {
             ExecutionResult result = engine.execute(query, params);
             tx.success();
-            return result.dumpToString();
+            return result.dumpToString() + OsUtils.LINE_SEPARATOR + result.getQueryStatistics().toString();
         }        
     }
     

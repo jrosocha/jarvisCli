@@ -9,6 +9,7 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.ImmutableMap;
+import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.model.Commodity;
 import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.model.Station;
@@ -19,9 +20,82 @@ public class StationService {
     @Autowired
     private GraphDbService graphDbService;
        
-    private String findStationUniqueResult = null;
+    private String userLastStoredStation = null;
     
-    public String find(String partial) {
+    /**
+     * Runs an exact match and a partial match looking to identify a single station.
+     * If a single station is found, it is loaded into memory
+     * 
+     * @param partial
+     * @return
+     * @throws Exception
+     */
+    public String findUniqueStation(String partial) throws StationNotFoundException {
+        
+        String foundStation = null;
+        boolean found = false;
+        
+        try {
+            foundStation = findExactStation(partial);
+            found = true;
+        } catch (Exception e) {
+            // not an exact patch. proceed
+        }
+     
+        if (!found) {
+            String query = "MATCH (station:Station)"
+                            + " WHERE station.name=~{stationName}"
+                            + " RETURN station.name";                
+    
+            Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");
+            List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
+            
+            if (results.size() == 0 || results.size() > 1 ) {
+                throw new StationNotFoundException("Unique station could not be identified for '" + partial + "'.");
+            }
+            
+            foundStation = (String) results.get(0).get("station.name");
+        }
+        userLastStoredStation = foundStation; 
+        return foundStation;
+    }
+ 
+    /**
+     * Matches if the station exists as typed
+     * If a single station is found, it is loaded into memory
+     * 
+     * @param station
+     * @return
+     * @throws Exception 
+     */
+    public String findExactStation(String station) throws StationNotFoundException {
+        String query = "MATCH (station:Station)"
+                + " WHERE station.name={stationName}"
+                + " RETURN station.name";                
+
+        String foundStation = "";
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", station.toUpperCase());
+        
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
+        
+        if (results.size() == 0 || results.size() > 1 ) {
+            throw new StationNotFoundException("Exact station '" + station + "' could not be identified");
+        }
+        foundStation = (String) results.get(0).get("station.name");
+        userLastStoredStation = foundStation;
+        return foundStation;
+    }
+
+     /**
+     * Matches a starting starting with @param partial 
+     * If more than one station is found, returns \n separated string.
+     * If a single station is found, it is loaded into memory
+     * If none is found, returns a message to that effect.
+     * 
+     * @param partial
+     * @return
+     */
+    public String findStation(String partial) {
         
         String query = "MATCH (station:Station)"
                         + " WHERE station.name=~{stationName}"
@@ -41,7 +115,7 @@ public class StationService {
         }
         
         if (results.size() == 1) {
-            findStationUniqueResult = (String) results.get(0).get("station.name");
+            userLastStoredStation = (String) results.get(0).get("station.name");
         }
         
         return out;
@@ -113,17 +187,17 @@ public class StationService {
     }
     
     /**
-     * @return the findStationUniqueResult
+     * @return the userLastStoredStation
      */
-    public String getFindStationUniqueResult() {
-        return findStationUniqueResult;
+    public String getUserLastStoredStation() {
+        return userLastStoredStation;
     }
 
     /**
-     * @param findStationUniqueResult the findStationUniqueResult to set
+     * @param userLastStoredStation the userLastStoredStation to set
      */
-    public void setFindStationUniqueResult(String findStationUniqueResult) {
-        this.findStationUniqueResult = findStationUniqueResult;
+    public void setUserLastStoredStation(String findStationUniqueResult) {
+        this.userLastStoredStation = findStationUniqueResult;
     }
     
 }

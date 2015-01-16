@@ -254,3 +254,11 @@ tsta2.name as secondsStopStationName,
 hop1UnitProfit + (sell2.sellPrice - buy2.buyPrice) as roundTripUnitProfit
 ORDER BY roundTripUnitProfit DESC
 LIMIT 3
+
+
+
+CREATE INDEX ON :System(name);
+CREATE INDEX ON :Station(name);
+CREATE INDEX ON :Commodity(name);
+CREATE INDEX ON :FRAMESHIFT(ly);
+

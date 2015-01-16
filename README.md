@@ -11,9 +11,10 @@ Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 * run gradle2 or gradlew.bat
 
 * cd build/install/jarvis/data
-* edit jarvis.properties. Change the line that reads like below to point to where yourElite OCR created .csv files go.
-
-    eliteocr.directory.path=/Users/jrosocha/trade/Elite Dangerous
+* edit jarvis-config.json. Change the line that reads like below to point to where yourElite OCR created .csv files go.
+```
+"eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
+```
 
 * cd ../bin (or build/install/jarvis/bin for those of you who are lost)
 
@@ -24,6 +25,7 @@ Tying help <command> hill help more.
 
 A good list of things to do:
 
+```
 ship 44;10;1000000  (Really ship your-cargo-rooom;your-jump-distance;cash-on-hand)
 
 ocr --scan ( scans a configured directory for .csv files in that Elite OCR format, and pushes them to an archive folder) 
@@ -37,4 +39,4 @@ go2 (computes a 2 stop within 1 jump of each other trade)
 gon --jump 2 (computes a one one stop trade within 2 jumps of your starting system)
 
 go2n --jump 2 (computes a 2 stop trade within 2 jumps of each stop .. 3 or more makes this unusably slow, around 20 minutes. 2 should return in 20-30 seconds)
-
+```

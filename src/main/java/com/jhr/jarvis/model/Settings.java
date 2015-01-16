@@ -1,29 +1,24 @@
 package com.jhr.jarvis.model;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class Settings {
 
-    /**
-     * @return the eliteOcrScanArchiveEnabed
-     */
-    public boolean isEliteOcrScanArchiveEnabed() {
-        return eliteOcrScanArchiveEnabed;
-    }
-
+    @JsonIgnore
     private boolean loaded = false;
-    
-    private String test = null;
     
     private String graphDb = null;
     
@@ -33,31 +28,33 @@ public class Settings {
     
     private boolean eliteOcrScanArchiveEnabed = false;
     
+    private int longestDistanceEdge = 25;
+    
+    @JsonIgnore
+    @Autowired
+    private ObjectMapper objectMapper;
+    
     @PostConstruct
     public void loadSettings() throws FileNotFoundException, IOException {
         
-        File settings = new File("../data/jarvis.properties");
+        File settings = new File("../data/jarvis-config.json");
+        Settings fileSettings = null;
         
-        Properties p = new Properties();
-        try (InputStream fis = new FileInputStream(settings)) {
-            p.load(fis);
-            load(p);
+        try {
+            fileSettings = objectMapper.readValue(settings, Settings.class);
         } catch (Exception e) {
             e.printStackTrace();
             // try developer file for load dev
-            p.load(this.getClass().getResourceAsStream("/jarvis-dev.properties"));
-            load(p);
+            fileSettings = objectMapper.readValue(this.getClass().getResourceAsStream("/jarvis-dev-config.json"), Settings.class);
         }
+        
+        load(fileSettings);
         
         loaded = true;
     }
     
-    private void load(Properties p) {
-        test = p.getProperty("test");
-        graphDb = p.getProperty("neo4j");
-        systemsFile = p.getProperty("systems.file.path");
-        eliteOcrScanDirectory = p.getProperty("eliteocr.directory.path");
-        eliteOcrScanArchiveEnabed = Boolean.parseBoolean(p.getProperty("eliteocr.directory.archive"));
+    private void load(Settings s) {
+        BeanUtils.copyProperties(s, this);
     }
     
     /* (non-Javadoc)
@@ -65,15 +62,12 @@ public class Settings {
      */
     @Override
     public String toString() {
-        return "Settings [loaded=" + loaded + ", test=" + test + ", graphDb=" + graphDb + ", systemsFile=" + systemsFile + ", eliteOcrScanDirectory=" + eliteOcrScanDirectory
-                + ", eliteOcrScanArchiveEnabed=" + eliteOcrScanArchiveEnabed + "]";
-    }
-    
-    /**
-     * @return the test
-     */
-    public String getTest() {
-        return test;
+        try {
+            return objectMapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
     
     /**
@@ -123,5 +117,26 @@ public class Settings {
      */
     public String getSystemsFile() {
         return systemsFile;
+    }
+    
+    /**
+     * @return the eliteOcrScanArchiveEnabed
+     */
+    public boolean isEliteOcrScanArchiveEnabed() {
+        return eliteOcrScanArchiveEnabed;
+    }
+    
+    /**
+     * @return the longestDistanceEdge
+     */
+    public int getLongestDistanceEdge() {
+        return longestDistanceEdge;
+    }
+
+    /**
+     * @param longestDistanceEdge the longestDistanceEdge to set
+     */
+    public void setLongestDistanceEdge(int longestDistanceEdge) {
+        this.longestDistanceEdge = longestDistanceEdge;
     }
 }

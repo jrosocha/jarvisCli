@@ -1,0 +1,7 @@
+{
+  "graphDb" : "/Users/jrosocha/neo4j-community-2.1.6/data/graph.db",
+  "systemsFile" : "data/System.csv",
+  "eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
+  "eliteOcrScanArchiveEnabed" : false,
+  "longestDistanceEdge" : 25
+}

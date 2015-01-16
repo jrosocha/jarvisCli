@@ -12,6 +12,7 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.service.GraphDbService;
@@ -28,6 +29,9 @@ public class DevCommands implements CommandMarker {
     
     @Autowired
     private Settings settings;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
     
 	@CliCommand(value = "dev", help = "Dont mess with this.")
 	public String loadSystemsToMemory(
@@ -58,12 +62,14 @@ public class DevCommands implements CommandMarker {
         }
 	    
 	    if (!StringUtils.isEmpty(query)) {
-	        out += graphDbService.runCypher(query);
+	        out += graphDbService.runCypherWithTransaction(query);
 	    }
 	    
 	    if (!StringUtils.isEmpty(properties)) {
 	        settings.loadSettings();
 	        out += settings.toString() + OsUtils.LINE_SEPARATOR;
+	        
+	        objectMapper.writeValue(new File("../data/jarvis-congig.json"), settings);
 	    }
         
         if (!StringUtils.isEmpty(wipeDb)) {

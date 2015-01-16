@@ -3,6 +3,7 @@ package com.jhr.jarvis.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +27,21 @@ public class StarSystemService {
     
     @Autowired
     private Settings settings;
- 
+
+    
+    public Set<StarSystem> closeStarSystems(final StarSystem s, final float distance) {
+        
+        if (starSystemData == null) {
+           return new HashSet<StarSystem>();
+        }
+        
+        Set<StarSystem> closeSystems = starSystemData.parallelStream().filter(s2->{ 
+            return Math.sqrt( (Math.pow((s.getX()-s2.getX()),2.0)+Math.pow((s.getY()-s2.getY()),2.0)+Math.pow((s.getZ()-s2.getZ()),2.0))) <= distance;
+        }).collect(Collectors.toSet());
+        
+        return closeSystems;        
+    }
+    
     /**
      * Loads the Systems.csv file to memory for use in identifying x,y,z coords for use when adding systems to the graph.
      * 
@@ -74,10 +89,11 @@ public class StarSystemService {
      * @return
      */
     public String createLyEdgesForSystem(StarSystem system) {
-        Map<String, Object> cypherParams = ImmutableMap.of("name", system.getName(), "x", system.getX(), "y", system.getY(), "z", system.getZ());
+        Map<String, Object> cypherParams = ImmutableMap.of("name", system.getName(), "x", system.getX(), "y", system.getY(), "z", system.getZ(), "edgeMaxDistance", settings.getLongestDistanceEdge());
         String query = "MATCH (t:System), (f:System {name:{name}, pos_x:{x}, pos_y:{y}, pos_z:{z}}) " +
                        "WHERE t.name<>f.name AND NOT (t)-[:FRAMESHIFT]-(f) " +
-                       "MERGE (f)-[:FRAMESHIFT { ly: sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2))}]->(t);";
+                       "FOREACH(ignoreMe IN CASE WHEN sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2)) <= {edgeMaxDistance} THEN [1] ELSE [] END | " +
+                       "MERGE (f)-[:FRAMESHIFT { ly: sqrt(((f.pos_x-t.pos_x)^2 + (f.pos_y-t.pos_y)^2 + (f.pos_z-t.pos_z)^2))}]->(t));";
         String out = graphDbService.runCypherWithTransaction(query, cypherParams);
         return out;
     }
