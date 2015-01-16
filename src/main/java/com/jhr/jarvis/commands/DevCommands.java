@@ -68,8 +68,6 @@ public class DevCommands implements CommandMarker {
 	    if (!StringUtils.isEmpty(properties)) {
 	        settings.loadSettings();
 	        out += settings.toString() + OsUtils.LINE_SEPARATOR;
-	        
-	        objectMapper.writeValue(new File("../data/jarvis-congig.json"), settings);
 	    }
         
         if (!StringUtils.isEmpty(wipeDb)) {
