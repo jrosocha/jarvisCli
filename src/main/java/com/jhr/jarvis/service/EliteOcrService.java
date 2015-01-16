@@ -140,16 +140,16 @@ public class EliteOcrService {
                 long date = StringUtils.isEmpty(splitLine[9]) ? 0 : parseCSVDateFormat(splitLine[9]).getTime();
                 
                 exchanges++;
-                stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply, date);
+                stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply, date); 
             }
         }
         
-        out += in.getAbsolutePath() + OsUtils.LINE_SEPARATOR;
-        out += "systems added or updated " + systems + OsUtils.LINE_SEPARATOR;
-        out += "stations added or updated " + stations + OsUtils.LINE_SEPARATOR;
-        out += "commodities added or updated " + commodities + OsUtils.LINE_SEPARATOR;
-        out += "exchanges added or updated " + exchanges + OsUtils.LINE_SEPARATOR;
-        out += "activity completed in " + ((new Date().getTime() - start.getTime())/1000.0) + " seconds" + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
+        System.out.println("loaded " + in.getAbsolutePath());
+        System.out.println("systems added or updated " + systems);
+        System.out.println("stations added or updated " + stations);
+        System.out.println("commodities added or updated " + commodities);
+        System.out.println("exchanges added or updated " + exchanges);
+        System.out.println("activity completed in " + ((new Date().getTime() - start.getTime())/1000.0) + " seconds" + OsUtils.LINE_SEPARATOR);
         
         return out;
     };
