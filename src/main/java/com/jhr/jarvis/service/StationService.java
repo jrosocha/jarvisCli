@@ -224,7 +224,13 @@ public class StationService {
         
         String query = "MATCH (system:System)-[:HAS]->(station:Station)-[ex:EXCHANGE]->(commodity:Commodity)"
                      + "WHERE station.name = {stationName} "
-                     + "RETURN system.name AS `SYSTEM`, station.name AS `STATION`, commodity.name AS `COMMODITY`, ex.buyPrice AS `BUY @`, ex.sellPrice AS `SELL @`, ex.supply AS `SUPPLY`, ((timestamp() - ex.date)/1000.0/60.0/60.0/24.0) AS `DAYS OLD`";
+                     + "RETURN system.name AS `SYSTEM`, "
+                     + "station.name AS `STATION`, "
+                     + "commodity.name AS `COMMODITY`, "
+                     + "ex.buyPrice AS `BUY @`, "
+                     + "ex.sellPrice AS `SELL @`, "
+                     + "ex.supply AS `SUPPLY`, "
+                     + "ROUND((timestamp() - ex.date)/1000.0/60.0/60.0/24.0) AS `DAYS OLD`";
         
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
         return graphDbService.runCypher(query, cypherParams);

@@ -8,7 +8,11 @@ import javax.annotation.PostConstruct;
 
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
+import org.neo4j.graphalgo.GraphAlgoFactory;
+import org.neo4j.graphalgo.PathFinder;
+import org.neo4j.graphalgo.WeightedPath;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.PathExpanders;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -16,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
+import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.model.Settings;
 
 
@@ -115,6 +120,33 @@ public class GraphDbService {
             tx.success();
             return result.dumpToString();
         } 
+    }
+    
+    
+    //pathing work
+    public void x(String fromSystem, String toSystem) {
+        
+        try (Transaction tx = graphDb.beginTx();) {
+        
+            Map<String, Object> cypherParams = ImmutableMap.of("fromSystem", fromSystem, "toSystem", toSystem);
+            ExecutionResult result = engine.execute("MATCH (fromSystem:System),(toSystem:System) WHERE fromSystem.name = {fromSystem} AND toSystem.name = {toSystem} RETURN fromSystem, toSystem", cypherParams);
+            
+            //result.
+            
+        
+        }
+        
+        
+//        Label label = DynamicLabel.label( "System" );
+//        
+//        PathFinder<WeightedPath> finder = GraphAlgoFactory.dijkstra(
+//                PathExpanders.forTypeAndDirection( RelationshipType., Direction.BOTH ), "ly" );
+//
+//            WeightedPath path = finder.findSinglePath( nodeA, nodeB );
+//
+//            // Get the weight for the found path
+//            path.weight();     
+
     }
     
 }
