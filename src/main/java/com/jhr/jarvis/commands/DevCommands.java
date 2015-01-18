@@ -36,7 +36,7 @@ public class DevCommands implements CommandMarker {
 	@CliCommand(value = "dev", help = "Dont mess with this.")
 	public String loadSystemsToMemory(
 		@CliOption(key = { "reload" }, mandatory = false, specifiedDefaultValue="true", help = "reload Systems.csv file.") final String reload,
-	    @CliOption(key = { "get" }, mandatory = false, help = "Return data system from Systems.csv") final String get,
+	    @CliOption(key = { "get" }, mandatory = false, help = "Return data system from Systems.csv. Uses a regex.") final String get,
 	    @CliOption(key = { "query" }, mandatory = false, help = "Raw neo4j query") final String query,
 	    @CliOption(key = { "settings" }, mandatory = false, specifiedDefaultValue="true", help = "Loads/Reads the jarvis.properties file") final String properties,
 	    @CliOption(key = { "wipe" }, mandatory = false, specifiedDefaultValue="true", help = "Emptys the Neo4j graph") final String wipeDb
@@ -50,7 +50,7 @@ public class DevCommands implements CommandMarker {
 	    }
 	    
 	    if (!StringUtils.isEmpty(get)) {
-            List<StarSystem> ss = starSystemService.searchStarSystemsByName(get);
+            List<StarSystem> ss = starSystemService.searchStarSystemsByName(get, false);
             if (ss == null || ss.size() == 0) {
                 out += String.format("%s not found.", get) + OsUtils.LINE_SEPARATOR;
             } else {

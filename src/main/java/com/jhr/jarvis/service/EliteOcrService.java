@@ -48,11 +48,8 @@ public class EliteOcrService {
     
     public synchronized String scanDirectory(boolean doArchive) throws IOException {
         
-        
         Date start = new Date();
         lastScanned = new Date();
-        
-        
         
         File eliteOcrDir = new File(settings.getEliteOcrScanDirectory());
         File eliteOcrArchiveDir = new File(eliteOcrDir, "archive");
@@ -105,7 +102,7 @@ public class EliteOcrService {
                 String[] splitLine = line.split(";");
                 
                 if (currentSystem == null || !currentSystem.getName().equals(splitLine[0].toUpperCase())) {
-                    List<StarSystem> matchingSystems = starSystemService.searchStarSystemsByName(splitLine[0].toUpperCase());
+                    List<StarSystem> matchingSystems = starSystemService.searchStarSystemsByName(splitLine[0].toUpperCase(), true);
                     if (matchingSystems.size() == 0) {
                         // log an error?
                         continue;

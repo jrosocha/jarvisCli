@@ -131,7 +131,15 @@ public class GraphDbService {
             Map<String, Object> cypherParams = ImmutableMap.of("fromSystem", fromSystem, "toSystem", toSystem);
             ExecutionResult result = engine.execute("MATCH (fromSystem:System),(toSystem:System) WHERE fromSystem.name = {fromSystem} AND toSystem.name = {toSystem} RETURN fromSystem, toSystem", cypherParams);
             
+            for (Map<String, Object> map : result) {
+                
+                Object o = map.get("fromSystem");
+                Object o2 = map.get("toSystem");
+                
+            }
             //result.
+            
+            System.out.print(result.dumpToString());
             
         
         }

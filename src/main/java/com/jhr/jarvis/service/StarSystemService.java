@@ -54,19 +54,24 @@ public class StarSystemService {
     }
     
     /**
-     * searches for systems with a given regex.
      * 
-     * @param regex
+     * @param systemName
+     * @param exactMatch if false, use String.match(regex). If true use String.equals
      * @return
      * @throws IOException
      */
-    public List<StarSystem> searchStarSystemsByName(String regex) throws IOException {
+    public List<StarSystem> searchStarSystemsByName(String systemName, boolean exactMatch) throws IOException {
         
         if (starSystemData == null) {
             loadSystems(new File(settings.getSystemsFile()));
         }
         
-        List<StarSystem> systems = starSystemData.parallelStream().filter(ss->{ return ss.getName().matches(regex); }).collect(Collectors.toList());
+        List<StarSystem> systems;
+        if (exactMatch) {
+            systems = starSystemData.parallelStream().filter(ss->{ return ss.getName().toUpperCase().equals(systemName); }).collect(Collectors.toList());
+        } else {
+            systems = starSystemData.parallelStream().filter(ss->{ return ss.getName().matches(systemName); }).collect(Collectors.toList());
+        }
         return systems;
     }
     
