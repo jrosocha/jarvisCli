@@ -187,20 +187,9 @@ public class StationService {
         return graphDbService.runCypherWithTransaction(query, cypherParams);
     }
     
-    public String createCommodityExchangeRelationship(Station s, Commodity c, int sellPrice, int buyPrice, int supply, long date) {
+    public String createCommodityExchangeRelationship(Station s, Commodity c, int sellPrice, int buyPrice, int supply, int demand, long date) {
         
         String out = "";
-        
-        // delete old exchange data
-//        Map<String, Object> cypherParams = ImmutableMap.of("stationName", s.getName(), "commodityName", c.getName());
-//        String deleteExchangeQuery = "MATCH (station:Station)-[e:EXCHANGE]->(commodity:Commodity) " +
-//                        "WHERE station.name = {stationName} " + 
-//                        "AND commodity.name = {commodityName} " + 
-//                        "DELETE e";
-//        
-//        out += graphDbService.runCypherWithTransaction(deleteExchangeQuery, cypherParams);
-        
-        // add new exchange data
         // add new exchange data
         Map<String, Object> cypherParams2 = new HashMap<>();
         cypherParams2.put("stationName", s.getName());
@@ -208,13 +197,14 @@ public class StationService {
         cypherParams2.put("sellPrice", sellPrice);
         cypherParams2.put("buyPrice", buyPrice);
         cypherParams2.put("supply", supply);
+        cypherParams2.put("demand", demand);      
         cypherParams2.put("date", date);
         
         //, sellPrice, "buyPrice", buyPrice, "supply", supply, "createdOn", createdOn.getTime());
         String createExchange = "MATCH (station:Station), (commodity:Commodity) " +
                                 "WHERE station.name = {stationName} " + 
                                 "AND commodity.name = {commodityName} " + 
-                                "MERGE (station)-[exchange:EXCHANGE{buyPrice:{buyPrice}, sellPrice:{sellPrice}, supply:{supply}, date:{date}}]->(commodity);";
+                                "MERGE (station)-[exchange:EXCHANGE{buyPrice:{buyPrice}, sellPrice:{sellPrice}, supply:{supply}, demand:{demand}, date:{date}}]->(commodity);";
         out += graphDbService.runCypherWithTransaction(createExchange, cypherParams2);
         
         return out;
@@ -228,9 +218,10 @@ public class StationService {
                      + "station.name AS `STATION`, "
                      + "commodity.name AS `COMMODITY`, "
                      + "ex.buyPrice AS `BUY @`, "
-                     + "ex.sellPrice AS `SELL @`, "
                      + "ex.supply AS `SUPPLY`, "
-                     + "ROUND((timestamp() - ex.date)/1000.0/60.0/60.0/24.0) AS `DAYS OLD`";
+                     + "ex.sellPrice AS `SELL @`, "
+                     + "ex.demand AS `DEMAND`, "
+                     + "ROUND((timestamp() - ex.date)/1000/60/60/24) AS `DAYS OLD`";
         
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
         return graphDbService.runCypher(query, cypherParams);

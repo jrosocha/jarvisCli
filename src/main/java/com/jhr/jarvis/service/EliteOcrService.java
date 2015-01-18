@@ -140,10 +140,11 @@ public class EliteOcrService {
                 int buyPrice = StringUtils.isEmpty(splitLine[3]) ? 0 : Integer.parseInt(splitLine[3]);
                 int sellPrice = StringUtils.isEmpty(splitLine[4]) ? 0 : Integer.parseInt(splitLine[4]);
                 int supply = StringUtils.isEmpty(splitLine[7]) ? 0 : Integer.parseInt(splitLine[7]);
+                int demand = StringUtils.isEmpty(splitLine[5]) ? 0 : Integer.parseInt(splitLine[5]);
                 long date = StringUtils.isEmpty(splitLine[9]) ? 0 : parseCSVDateFormat(splitLine[9]).getTime();
                 
                 exchanges++;
-                stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply, date); 
+                stationService.createCommodityExchangeRelationship(currentStation, currentCommodity, buyPrice, sellPrice, supply, demand, date); 
             }
         }
         
