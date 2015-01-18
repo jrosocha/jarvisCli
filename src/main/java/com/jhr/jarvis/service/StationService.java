@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.support.table.TableRenderer;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Service;
@@ -224,7 +226,16 @@ public class StationService {
                      + "ROUND((timestamp() - ex.date)/1000/60/60/24) AS `DAYS OLD`";
         
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
-        return graphDbService.runCypher(query, cypherParams);
+        //return graphDbService.runCypher(query, cypherParams);
+        
+        List<Map<String, Object>> result = graphDbService.runCypherNative(query, cypherParams);
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "System: " + result.get(0).get("SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "Station: " + result.get(0).get("STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Data Age in Days: " + result.get(0).get("DAYS OLD") + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
+        out += TableRenderer.renderMapDataAsTable(result, ImmutableList.of("COMMODITY","BUY @","SUPPLY","SELL @","DEMAND"));
+        return out;
 
     }
     

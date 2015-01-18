@@ -38,7 +38,7 @@ ship 44;10;1000000
 Sets your ship. This persists between restarts/etc. The commands is ship your-cargo-rooom;your-jump-distance;cash-on-hand
  
 ```
-ocr --scan  
+ocr  
 ```
 Scans a configured directory for .csv files in that Elite OCR format, and pushes them to an archive folder if that option is enabled. jarvis-config.json hass all of those goodies.
 
