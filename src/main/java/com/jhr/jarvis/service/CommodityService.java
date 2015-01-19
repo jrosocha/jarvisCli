@@ -1,7 +1,13 @@
 package com.jhr.jarvis.service;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.support.util.OsUtils;
@@ -12,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
 import com.jhr.jarvis.model.Commodity;
 import com.jhr.jarvis.model.Settings;
+import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.model.Station;
 
 @Service
@@ -26,8 +33,30 @@ public class CommodityService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    String userLastStoredCommodity = null;
+    private String userLastStoredCommodity = null;
+    
+    // commodity name->commodity
+    private Map<String,Commodity> commodityByName = null;
 
+    /**
+     * Loads the Commodity.csv file to memory for use in giving groups to commodities
+     * 
+     * @param systemsCsvFile
+     * @throws IOException
+     */
+    public synchronized void loadCommodities(File systemsCsvFile) throws IOException {
+        Map<String, Commodity> out = Files.lines(systemsCsvFile.toPath()).parallel().map(parseCSVLineToCommodity).collect(Collectors.toMap(Commodity::getName, c->c));
+        commodityByName = out;
+    }
+    
+    public Commodity getCommodityByName(String commodity) throws IOException {
+        if (commodityByName == null) {
+            loadCommodities(new File(settings.getCommodityFile()));
+        }
+        
+        return commodityByName.get(commodity);
+    }
+    
     /**
      * Matches a commodity with @param partial If more than one commodity is
      * found, returns a \n separated string. If a single commodity is found, it
@@ -138,5 +167,13 @@ public class CommodityService {
     public void setUserLastStoredCommodity(String userLastStoredCommodity) {
         this.userLastStoredCommodity = userLastStoredCommodity;
     }
+    
+    // commodity line
+    // group,commodity.ordinal
+    private Function<String, Commodity> parseCSVLineToCommodity = line -> {
+        String[] splitLine = line.split(",");
+        Commodity c = new Commodity(splitLine[1].toUpperCase(),splitLine[0].toUpperCase());
+        return c;
+    };
 
 }

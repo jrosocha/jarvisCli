@@ -24,6 +24,8 @@ public class Settings {
     
     private String systemsFile = null;
     
+    private String commodityFile = null;
+    
     private String eliteOcrScanDirectory = null;
     
     private boolean eliteOcrScanArchiveEnabed = false;
@@ -162,4 +164,19 @@ public class Settings {
     public void setEliteOcrScanArchiveEnabed(boolean eliteOcrScanArchiveEnabed) {
         this.eliteOcrScanArchiveEnabed = eliteOcrScanArchiveEnabed;
     }
+
+    /**
+     * @return the commodityFile
+     */
+    public String getCommodityFile() {
+        return commodityFile;
+    }
+
+    /**
+     * @param commodityFile the commodityFile to set
+     */
+    public void setCommodityFile(String commodityFile) {
+        this.commodityFile = commodityFile;
+    }
+
 }

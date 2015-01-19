@@ -3,6 +3,7 @@ package com.jhr.jarvis.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ public class StationService {
 
     @Autowired
     private GraphDbService graphDbService;
+    
+    @Autowired
+    private CommodityService commodityService;
        
     private String userLastStoredStation = null;
     
@@ -226,15 +230,41 @@ public class StationService {
                      + "ROUND((timestamp() - ex.date)/1000/60/60/24) AS `DAYS OLD`";
         
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
-        //return graphDbService.runCypher(query, cypherParams);
         
         List<Map<String, Object>> result = graphDbService.runCypherNative(query, cypherParams);
         
+        List<Map<String, Object>> sortedResult = result.parallelStream().map(inRecord->{
+            Map<String,Object> row = new HashMap<>(inRecord);
+            Commodity c = null;
+            try {
+                c = commodityService.getCommodityByName((String) row.get("COMMODITY"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String group = c != null ? c.getGroup() : "_UNKNOWN"; 
+            row.put("GROUP", group);
+            return row;
+        }).filter(map->{
+            if ((int) map.get("SUPPLY") == 0 && (int) map.get("DEMAND") == 0) {
+                return false;
+            }
+            return true;
+        }).sorted((row1,row2)->{
+            String group1 = (String) row1.get("GROUP");
+            String group2 = (String) row2.get("GROUP");
+            String comm1 = (String) row1.get("COMMODITY");
+            String comm2 = (String) row2.get("COMMODITY");
+            if (group1.equals(group2)) {
+                return comm1.compareTo(comm2);
+            }
+            return group1.compareTo(group2);
+        }).collect(Collectors.toList());
+        
         String out = OsUtils.LINE_SEPARATOR;
-        out += "System: " + result.get(0).get("SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "Station: " + result.get(0).get("STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Data Age in Days: " + result.get(0).get("DAYS OLD") + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
-        out += TableRenderer.renderMapDataAsTable(result, ImmutableList.of("COMMODITY","BUY @","SUPPLY","SELL @","DEMAND"));
+        out += "System: " + sortedResult.get(0).get("SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "Station: " + sortedResult.get(0).get("STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Data Age in Days: " + sortedResult.get(0).get("DAYS OLD") + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
+        out += TableRenderer.renderMapDataAsTable(sortedResult, ImmutableList.of("GROUP", "COMMODITY", "BUY @", "SUPPLY", "SELL @", "DEMAND"));
         return out;
 
     }

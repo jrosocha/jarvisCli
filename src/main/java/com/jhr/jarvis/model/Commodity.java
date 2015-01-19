@@ -3,18 +3,25 @@ package com.jhr.jarvis.model;
 public class Commodity {
 
     private String name;
+    private String group;
     
     public Commodity(String name) {
         super();
         this.name = name;
     }
 
+    public Commodity(String name, String group) {
+        super();
+        this.name = name;
+        this.group = group;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
-        return "Station [name=" + name + "]";
+        return "Commodity [name=" + name + ", group=" + group + "]";
     }
     
     /* (non-Javadoc)
@@ -67,4 +74,19 @@ public class Commodity {
     public void setName(String name) {
         this.name = name;
     }
+
+    /**
+     * @return the group
+     */
+    public String getGroup() {
+        return group;
+    }
+
+    /**
+     * @param group the group to set
+     */
+    public void setGroup(String group) {
+        this.group = group;
+    }
+
 }

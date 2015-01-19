@@ -2,9 +2,12 @@ package com.jhr.jarvis.service;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
+import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.support.table.TableRenderer;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
@@ -47,18 +50,29 @@ public class TradeService {
             + " AND sell.demand >= {cargo}"            
             + " AND sell.sellPrice > buy.buyPrice"
             + " RETURN DISTINCT" 
+            + " fromSystem.name as `FROM SYSTEM`," 
             + " fromStation.name as `FROM STATION`," 
             + " toStation.name as `TO STATION`," 
             + " toSystem.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`," 
-            + " (sell.sellPrice - buy.buyPrice) as `PER UNIT PROFIT`,"
+            + " buy.buyPrice AS `BUY @`,"
+            + " sell.sellPrice AS `SELL @`,"
+            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
             + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
             + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
             + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `CARGO PROFIT`"
             + " ORDER BY `CARGO PROFIT` DESC"
             + " LIMIT 5 ";   
         
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";        
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "UNIT PROFIT", "CARGO PROFIT"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
     /**
