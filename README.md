@@ -1,7 +1,7 @@
 # jarvis
 Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
 
-This is a learning exercise for Neo4j and spring-shell in Java. If you like these kinds of things, feel free to pull and contribute. If you are a Neo4j expert, man I need some advice, because this this is awful slow around the [:FRAMESHIFT] edge.
+This is a learning exercise for Neo4j and spring-shell in Java. If you like these kinds of things, feel free to pull and contribute. If you are a Neo4j expert, man I need some advice, because this this is awful slow around the [:FRAMESHIFT] edge once you get past 2 jumps in a go command.
 
 Anyways the DB looks like this:
 ```
@@ -22,6 +22,8 @@ Anyways the DB looks like this:
 ```
 "eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
 ```
+
+(At this point you can copy the build/install/jarvis folder somewhere else. It contains all the artifacts you require to run this app.
 
 * cd ../bin (or build/install/jarvis/bin for those of you who are lost)
 
@@ -71,3 +73,13 @@ Computes a one one stop trade within n jumps of your starting system. This takes
 go2n --jumps 2 
 ```
 Computes a 2 stop trade within 2 jumps of each stop .. 3 or more makes this unusably slow, around 20 minutes. 2 should return in ~60 seconds)
+
+```
+system aia
+```
+Finds all systems that start with aia
+
+```
+path --from aiabiko --to altais
+```
+Finds the shortest path between 2 systems given your ship's jump range.

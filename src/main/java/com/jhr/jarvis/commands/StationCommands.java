@@ -21,7 +21,7 @@ public class StationCommands implements CommandMarker {
     @Autowired
     private ObjectMapper objectMapper;
     
-    @CliCommand(value = { "find", "f" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
+    @CliCommand(value = { "find" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
     public String find(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
         String usage = "usage: find <partal station name>" 
@@ -37,7 +37,7 @@ public class StationCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = { "station", "st" }, help = "usage: station Goo \n Find the station starting with the crap you typed.")
+    @CliCommand(value = { "station" }, help = "usage: station Goo \n Find the station starting with the crap you typed.")
     public String stationDetails(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
         String usage = "usage: station <partal station name>" 
