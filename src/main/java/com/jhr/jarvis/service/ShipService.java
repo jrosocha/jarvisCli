@@ -25,7 +25,7 @@ public class ShipService {
     @Autowired
     private ObjectMapper objectMapper;
     
-    private File shipFile = new File("../data/ship");
+    private File shipFile = null;
     
     public boolean isShipEmpty(Ship ship) {
         if (ship == null || ship.getCargoSpace() == 0 || ship.getCash() == 0 || ship.getJumpDistance() == 0) {
@@ -35,6 +35,7 @@ public class ShipService {
     }
     
     public Ship saveShip(Ship ship) throws JsonGenerationException, JsonMappingException, IOException {
+        shipFile = new File(settings.getShipFile());
         
         if (shipFile.exists()) {
             shipFile.delete();
@@ -46,6 +47,8 @@ public class ShipService {
     }
     
     public Ship loadShip() throws JsonParseException, JsonMappingException, IOException {
+        shipFile = new File(settings.getShipFile());
+        
         if (shipFile.exists()) {
             return objectMapper.readValue(shipFile, Ship.class);
         }

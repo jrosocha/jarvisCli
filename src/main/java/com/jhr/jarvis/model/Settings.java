@@ -26,6 +26,8 @@ public class Settings {
     
     private String commodityFile = null;
     
+    private String shipFile = null;
+    
     private String eliteOcrScanDirectory = null;
     
     private boolean eliteOcrScanArchiveEnabed = false;
@@ -177,6 +179,20 @@ public class Settings {
      */
     public void setCommodityFile(String commodityFile) {
         this.commodityFile = commodityFile;
+    }
+
+    /**
+     * @return the shipFile
+     */
+    public String getShipFile() {
+        return shipFile;
+    }
+
+    /**
+     * @param shipFile the shipFile to set
+     */
+    public void setShipFile(String shipFile) {
+        this.shipFile = shipFile;
     }
 
 }

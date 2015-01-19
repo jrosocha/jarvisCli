@@ -1,4 +1,5 @@
 {
+  "shipFile" : "../data/Ship.json",
   "graphDb" : "../data/graph.db",
   "systemsFile" : "../data/System.csv",
   "commodityFile" : "../data/Commodity.csv",

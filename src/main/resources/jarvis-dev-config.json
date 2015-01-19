@@ -1,4 +1,5 @@
 {
+  "shipFile" : "data/Ship.json",
   "graphDb" : "/Users/jrosocha/neo4j-community-2.1.6/data/graph.db",
   "systemsFile" : "data/System.csv",
   "commodityFile" : "data/Commodity.csv",
