@@ -11,8 +11,16 @@ import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphalgo.WeightedPath;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.DynamicLabel;
+import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PathExpanders;
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -123,38 +131,20 @@ public class GraphDbService {
     }
     
     
-    //pathing work
-    public void x(String fromSystem, String toSystem) {
-        
-        try (Transaction tx = graphDb.beginTx();) {
-        
-            Map<String, Object> cypherParams = ImmutableMap.of("fromSystem", fromSystem, "toSystem", toSystem);
-            ExecutionResult result = engine.execute("MATCH (fromSystem:System),(toSystem:System) WHERE fromSystem.name = {fromSystem} AND toSystem.name = {toSystem} RETURN fromSystem, toSystem", cypherParams);
-            
-            for (Map<String, Object> map : result) {
-                
-                Object o = map.get("fromSystem");
-                Object o2 = map.get("toSystem");
-                
-            }
-            //result.
-            
-            System.out.print(result.dumpToString());
-            
-        
-        }
-        
-        
-//        Label label = DynamicLabel.label( "System" );
-//        
-//        PathFinder<WeightedPath> finder = GraphAlgoFactory.dijkstra(
-//                PathExpanders.forTypeAndDirection( RelationshipType., Direction.BOTH ), "ly" );
-//
-//            WeightedPath path = finder.findSinglePath( nodeA, nodeB );
-//
-//            // Get the weight for the found path
-//            path.weight();     
 
+
+    /**
+     * @return the graphDb
+     */
+    public GraphDatabaseService getGraphDb() {
+        return graphDb;
+    }
+
+    /**
+     * @return the engine
+     */
+    public ExecutionEngine getEngine() {
+        return engine;
     }
     
 }

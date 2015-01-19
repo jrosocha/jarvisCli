@@ -102,7 +102,7 @@ public class EliteOcrService {
                 String[] splitLine = line.split(";");
                 
                 if (currentSystem == null || !currentSystem.getName().equals(splitLine[0].toUpperCase())) {
-                    List<StarSystem> matchingSystems = starSystemService.searchStarSystemsByName(splitLine[0].toUpperCase(), true);
+                    List<StarSystem> matchingSystems = starSystemService.searchSystemFileForStarSystemsByName(splitLine[0].toUpperCase(), true);
                     if (matchingSystems.size() == 0) {
                         // log an error?
                         continue;

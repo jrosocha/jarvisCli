@@ -50,7 +50,7 @@ public class DevCommands implements CommandMarker {
 	    }
 	    
 	    if (!StringUtils.isEmpty(get)) {
-            List<StarSystem> ss = starSystemService.searchStarSystemsByName(get, false);
+            List<StarSystem> ss = starSystemService.searchSystemFileForStarSystemsByName(get, false);
             if (ss == null || ss.size() == 0) {
                 out += String.format("%s not found.", get) + OsUtils.LINE_SEPARATOR;
             } else {
