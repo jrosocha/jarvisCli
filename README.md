@@ -11,7 +11,7 @@ Anyways the DB looks like this:
 * Install Elite:Dangerous .. or all of this will really be boring
 * Install EliteOCR and learn how to use it. This CLI uses the csv exports. Mind what directory they get written to.
 
-* Install Java 8. Its is the language this app uses.
+* Install Java 8 (JDK to do the compile). Its is the language this app uses.
 
 * clone the git project from https://github.com/jrosocha/jarvis.git, you can just download the zip from github.
 * cd to the cloned directory
