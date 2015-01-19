@@ -1,14 +1,12 @@
 package com.jhr.jarvis.service;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.shell.support.table.TableRenderer;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
+import com.jhr.jarvis.table.TableRenderer;
 
 @Service
 public class TradeService {
@@ -61,16 +60,23 @@ public class TradeService {
             + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
             + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
             + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `CARGO PROFIT`"
-            + " ORDER BY `CARGO PROFIT` DESC"
+            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
+            + " ORDER BY `PROFIT` DESC"
             + " LIMIT 5 ";   
         
         List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
         
+        if (results.size() == 0) {
+            return "No exchange available in provided range";
+        }
+        
         String out = OsUtils.LINE_SEPARATOR;
         out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
         out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "UNIT PROFIT", "CARGO PROFIT"));
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best trading solution within 1 jump @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "CARGO COST", "PROFIT"));
         
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
@@ -111,6 +117,8 @@ public class TradeService {
             + " AND sell2.sellPrice > buy2.buyPrice"
             + " AND sell2.demand >= {cargo}"
             + " RETURN DISTINCT"
+            + " fromSystem.name AS `FROM SYSTEM`,"
+            + " fromStation.name AS `FROM STATION`,"
             + " hop1Commodity.name as `COMMODITY 1`,"
             + " profit1 as `PROFIT 1`,"
             + " toSystem.name as `SYSTEM 1`," 
@@ -122,8 +130,23 @@ public class TradeService {
             + " profit1 + ((sell2.sellPrice * {cargo}) - (buy2.buyPrice * {cargo})) as `TRIP PROFIT`"
             + " ORDER BY `TRIP PROFIT` DESC"
             + " LIMIT 5";
-            
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No exchange available in provided range";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best 2 station trading solution within 1 jump of each other @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("COMMODITY 1", "PROFIT 1", "SYSTEM 1", "STATION 1", "COMMODITY 2", "PROFIT 2", "SYSTEM 2", "STATION 2", "TRIP PROFIT"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
 
@@ -140,7 +163,6 @@ public class TradeService {
             + " AND sell.demand >= {cargo}"
             + " AND ALL(x IN shift WHERE x.ly <= {distance})"
             + " RETURN DISTINCT" 
-            //+ " REDUCE(distance = 0.0, ly IN shift| distance + ly.ly) AS `LY`,"
             + " fromSystem.name as `FROM SYSTEM`," 
             + " fromStation.name as `FROM STATION`," 
             + " toStation.name as `TO STATION`," 
@@ -151,24 +173,25 @@ public class TradeService {
             + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
             + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
             + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `CARGO PROFIT`"
-            + " ORDER BY `CARGO PROFIT` DESC"
+            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
+            + " ORDER BY `PROFIT` DESC"
             + " LIMIT 5 ";   
         
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);             
         
-        List<String> columns = new ArrayList<>();
-        columns.add("TO SYSTEM");
-        columns.add("TO STATION");
-        columns.add("COMMODITY");
-        columns.add("BUY @");
-        columns.add("SELL @");
-        columns.add("CARGO PROFIT");
+        if (results.size() == 0) {
+            return "No exchange available in provided range";
+        }
         
+        List<String> columns = ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "PROFIT");
+               
         String out = OsUtils.LINE_SEPARATOR;
         out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
         out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, columns);
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best trading solution within " + hops + " jump(s) @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR;
+        out += TableRenderer.renderMapDataAsTable(results, columns);
         
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
@@ -208,6 +231,8 @@ public class TradeService {
             + " AND sell2.demand >= {cargo}"
             + " AND ALL(x IN shift2 WHERE x.ly <= {distance})"
             + " RETURN DISTINCT"
+            + " fromSystem.name AS `FROM SYSTEM`,"
+            + " fromStation.name AS `FROM STATION`,"
             + " hop1Commodity.name as `COMMODITY 1`,"
             + " profit1 as `PROFIT 1`,"
             + " toSystem.name as `SYSTEM 1`," 
@@ -220,7 +245,22 @@ public class TradeService {
             + " ORDER BY `TRIP PROFIT` DESC"
             + " LIMIT 5";
         
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No exchange available in provided range";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best 2 station trading solutions within " + jumps + " jump of each other @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("COMMODITY 1", "PROFIT 1", "SYSTEM 1", "STATION 1", "COMMODITY 2", "PROFIT 2", "SYSTEM 2", "STATION 2", "TRIP PROFIT"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
 
     
@@ -242,6 +282,8 @@ public class TradeService {
             + " AND buy.supply > 0"
             + " AND commodity.name = {commodity}"
             + " RETURN" 
+            + " hereSys.name as `FROM SYSTEM`,"
+            + " here.name as `FROM STATION`,"
             + " here.name as `TO STATION`," 
             + " hereSys.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`,"
@@ -253,7 +295,9 @@ public class TradeService {
             + " AND buy.buyPrice > 0"
             + " AND buy.supply > 0"
             + " AND commodity.name = {commodity}" 
-            + " RETURN DISTINCT" 
+            + " RETURN DISTINCT"
+            + " fromSystem as `FROM SYSTEM`,"            
+            + " fromStation as `FROM STATION`,"
             + " toStation.name as `TO STATION`," 
             + " toSystem.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`,"
@@ -261,7 +305,22 @@ public class TradeService {
             + " ORDER BY `UNIT PRICE` ASC"
             + " LIMIT 5 ";   
         
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No purchase available in provided range";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best stations to buy " + results.get(0).get("COMMODITY") + " within " + jumps + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
     /**
@@ -282,6 +341,8 @@ public class TradeService {
             + " AND sell.demand > 0"
             + " AND commodity.name = {commodity}"
             + " RETURN" 
+            + " hereSys.name as `FROM SYSTEM`,"
+            + " here.name as `FROM STATION`,"
             + " here.name as `TO STATION`," 
             + " hereSys.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`,"
@@ -294,6 +355,8 @@ public class TradeService {
             + " AND sell.demand > 0"
             + " AND commodity.name = {commodity}" 
             + " RETURN DISTINCT" 
+            + " fromSystem as `FROM SYSTEM`,"            
+            + " fromStation as `FROM STATION`,"
             + " toStation.name as `TO STATION`," 
             + " toSystem.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`,"
@@ -301,7 +364,22 @@ public class TradeService {
             + " ORDER BY `UNIT PRICE` DESC"
             + " LIMIT 5 ";   
 
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No sale available in provided range";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best stations to sell " + results.get(0).get("COMMODITY") + " within " + jumps + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
     public String stationToStation(String fromStation, Ship s, String toStation) {
@@ -313,21 +391,42 @@ public class TradeService {
             + " AND buy.buyPrice > 0"
             + " AND buy.supply >= {cargo}"
             + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
+            + " AND sell.demand >= {cargo}"
             + " AND sell.sellPrice > 0"
             + " AND sell.sellPrice > buy.buyPrice"
             + " RETURN DISTINCT" 
             + " fromStation.name as `FROM STATION`," 
+            + " fromSystem.name as `FROM SYSTEM`,"
             + " toStation.name as `TO STATION`," 
             + " toSystem.name as `TO SYSTEM`," 
             + " commodity.name as `COMMODITY`," 
-            + " (sell.sellPrice - buy.buyPrice) as `PER UNIT PROFIT`,"
+            + " buy.buyPrice as `BUY @`,"
+            + " sell.sellPrice as `SELL @`,"
+            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
             + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
             + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
             + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `CARGO PROFIT`"
             + " ORDER BY `CARGO PROFIT` DESC"
             + " LIMIT 5 ";   
         
-        return graphDbService.runCypher(query, cypherParams) + OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No exchange available between provided stations";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "To System: " + results.get(0).get("TO SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "To Station: " + results.get(0).get("TO STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Commodities to exchange between stations." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("COMMODITY", "BUY @", "SELL @", "UNIT PROFIT", "CARGO PROFIT"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
 }
