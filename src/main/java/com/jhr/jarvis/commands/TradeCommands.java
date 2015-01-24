@@ -106,7 +106,7 @@ public class TradeCommands implements CommandMarker {
         }
         
         out += tradeService.gon(foundStation.getName(), ship, jumpDistance);
-        out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your acive station to the trade destination.";
+        out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your active station to the trade destination.";
         
         return out;
     }
@@ -117,7 +117,7 @@ public class TradeCommands implements CommandMarker {
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
         ) {
         
-        String usage = "usage: gon --start 'Station Name' --jumps 2" 
+        String usage = "usage: go2n --start 'Station Name' --jumps 2" 
                         + OsUtils.LINE_SEPARATOR
                         + "Best resource exchange within 1..n jumps of your jump distance. Takes 20+ seconds or so for --jumps 3." 
                         + OsUtils.LINE_SEPARATOR
@@ -198,7 +198,7 @@ public class TradeCommands implements CommandMarker {
         
         try {
             out += tradeService.go(foundStation.getName(), ship);
-            out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your acive station to the trade destination.";
+            out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your active station to the trade destination.";
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
         }        
@@ -206,7 +206,7 @@ public class TradeCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = "go2", help = "usage: go --start 'Station Name' \n 2 stop trading, not jumping more than one system.")
+    @CliCommand(value = "go2", help = "usage: go2 --start 'Station Name' \n 2 stop trading, not jumping more than one system.")
     public String go2(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station
         ) {
