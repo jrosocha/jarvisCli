@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,13 +16,10 @@ import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphalgo.WeightedPath;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpander;
-import org.neo4j.graphdb.PathExpanders;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
@@ -33,7 +29,6 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.ImmutableMap;
-import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
@@ -41,6 +36,9 @@ import com.jhr.jarvis.model.StarSystem;
 @Service
 public class StarSystemService {
 
+    /**
+     * list of systems loaded from the csv file, used to add new systems being added from new stations.
+     */
     private Set<StarSystem> starSystemData = null;
     
     @Autowired
@@ -48,6 +46,11 @@ public class StarSystemService {
     
     @Autowired
     private Settings settings;
+    
+    /**
+     * Populates when a user uses the station or find command. Used for --from in the path commands
+     */
+    private String userLastStoredSystem = null;
 
     private static final DynamicRelationshipType FRAMESHIFT_REL = DynamicRelationshipType.withName("FRAMESHIFT");
     
@@ -76,6 +79,9 @@ public class StarSystemService {
     }
     
     /**
+     * When adding a system found via a EliteOCR import, we grab the system's coordinates 
+     * from the data/System.csv file and add systems that are close to that one, so that systems without stations are
+     * more likely to appear in the graph.
      * 
      * @param systemName
      * @param exactMatch if false, use String.match(regex). If true use String.equals
@@ -129,16 +135,14 @@ public class StarSystemService {
     }
     
     /**
-     * This will fall apart because of jump distance or ships. 
-     * Will need to refine further. 
-     * dijkstra isn't enough. I need shortest weighted path, ignoring paths > n length.
+     * Calculates shortest distance between two systems, making no jump greater than the ship's jump distance.
      * 
      * @param fromSystem
      * @param toSystem
      * @param jumpDistance 
      * @return
      */
-    public String calculateShortestPathBetweenStations(String fromSystem, String toSystem, double jumpDistance) {
+    public String calculateShortestPathBetweenSystems(String fromSystem, String toSystem, double jumpDistance) {
         
         try (Transaction tx = graphDbService.getGraphDb().beginTx();) {
         
@@ -151,13 +155,9 @@ public class StarSystemService {
                 fromSystemNode = (Node) map.get("fromSystem");
                 toSystemNode = (Node) map.get("toSystem");
             }
-
-          //DynamicRelationshipType relationship = DynamicRelationshipType.withName("FRAMESHIFT");
           
           LyFilteringExpander expander = new LyFilteringExpander(jumpDistance);
-          
           PathFinder<WeightedPath> finder = GraphAlgoFactory.dijkstra(expander, "ly");
-  
           WeightedPath path = finder.findSinglePath(fromSystemNode, toSystemNode);
           
           String out = "";
@@ -177,6 +177,12 @@ public class StarSystemService {
         }
     }
     
+    /**
+     * When exploring a (system)-[FRAMESHIFT]-(system) relationship, only expand the relationships whee ly <= a value
+     * 
+     * @author jrosocha
+     *
+     */
     private class LyFilteringExpander implements PathExpander {
         
         private double lyFilter;
@@ -184,7 +190,6 @@ public class StarSystemService {
         public LyFilteringExpander(double ly) {
             lyFilter = ly;
         }
-        
         
         @Override
         public Iterable<Relationship> expand(Path neoPath, BranchState state) {
@@ -213,9 +218,9 @@ public class StarSystemService {
      * @return
      * @throws Exception
      */
-    public String findUniqueSystem(String partial) throws SystemNotFoundException {
+    public StarSystem findUniqueSystem(String partial) throws SystemNotFoundException {
         
-        String foundSystem = null;
+        StarSystem foundSystem = null;
         boolean found = false;
         
         try {
@@ -237,7 +242,7 @@ public class StarSystemService {
                 throw new SystemNotFoundException("Unique station could not be identified for '" + partial + "'.");
             }
             
-            foundSystem = (String) results.get(0).get("system.name");
+            foundSystem = new StarSystem((String) results.get(0).get("system.name"));
         }
 
         return foundSystem;
@@ -250,12 +255,16 @@ public class StarSystemService {
      * @return
      * @throws Exception 
      */
-    public String findExactSystem(String systemName) throws SystemNotFoundException {
+    public StarSystem findExactSystem(String systemName) throws SystemNotFoundException {
         String query = "MATCH (system:System)"
                 + " WHERE system.name={systemName}"
                 + " RETURN system.name";                
 
-        String foundSystem = "";
+        if (systemName == null) {
+            throw new SystemNotFoundException("Exact system '" + systemName + "' could not be identified");
+        }
+        
+        StarSystem foundSystem = null;
         Map<String, Object> cypherParams = ImmutableMap.of("systemName", systemName.toUpperCase());
         
         List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
@@ -263,7 +272,7 @@ public class StarSystemService {
         if (results.size() == 0 || results.size() > 1 ) {
             throw new SystemNotFoundException("Exact system '" + systemName + "' could not be identified");
         }
-        foundSystem = (String) results.get(0).get("system.name");
+        foundSystem = new StarSystem((String) results.get(0).get("system.name"));
         return foundSystem;
     }
 
@@ -275,23 +284,20 @@ public class StarSystemService {
      * @param partial
      * @return
      */
-    public String findSystem(String partial) {
+    public List<StarSystem> findSystem(String partial) {
         
         String query = "MATCH (system:System)"
                         + " WHERE system.name=~{systemName}"
                         + " RETURN system.name";                
 
-        String out = "";
-        Map<String, Object> cypherParams = ImmutableMap.of("systemName", partial.toUpperCase() + ".*");
+        List<StarSystem> out = new ArrayList<>();
+        Map<String, Object> cypherParams = ImmutableMap.of("systemName", (partial != null ? partial.toUpperCase() : "") + ".*");
         
         List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
         
-        if (results.size() == 0) {
-            out += String.format("No system found with name starting with '%s'", partial);
-        } else {
-            for (Map<String, Object> res: results) {
-                out += res.get("system.name") + OsUtils.LINE_SEPARATOR;
-            }
+        
+        for (Map<String, Object> res: results) {
+            out.add(new StarSystem((String) res.get("system.name")));
         }
         
         return out;
@@ -303,5 +309,19 @@ public class StarSystemService {
         StarSystem s =  new StarSystem( splitLine[0].toUpperCase(), Float.parseFloat(splitLine[1]),  Float.parseFloat(splitLine[2]),  Float.parseFloat(splitLine[3]));
         return s;
     };
+
+    /**
+     * @return the userLastStoredSystem
+     */
+    public String getUserLastStoredSystem() {
+        return userLastStoredSystem;
+    }
+
+    /**
+     * @param userLastStoredSystem the userLastStoredSystem to set
+     */
+    public void setUserLastStoredSystem(String userLastStoredSystem) {
+        this.userLastStoredSystem = userLastStoredSystem;
+    }
     
 }

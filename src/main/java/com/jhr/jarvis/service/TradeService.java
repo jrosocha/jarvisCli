@@ -1,7 +1,9 @@
 package com.jhr.jarvis.service;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,8 +16,10 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.jhr.jarvis.model.Exchange;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
+import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
 
 @Service
@@ -29,6 +33,8 @@ public class TradeService {
     
     @Autowired
     private ObjectMapper objectMapper;
+    
+    private Map<Integer, Exchange> lastSearchedExchanges = new HashMap<>(); 
     
     /**
      * runs the 1 hop from where you are search, providing 5 best options
@@ -70,13 +76,64 @@ public class TradeService {
             return "No exchange available in provided range";
         }
         
+        List<Map<String, Object>> modifiedResultList = includeSavedExchangeIndexWithQueryResults(results);        
+        
         String out = OsUtils.LINE_SEPARATOR;
         out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
         out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
         out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
         out += results.size() + " Best trading solution within 1 jump @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
-                ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "CARGO COST", "PROFIT"));
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(modifiedResultList, 
+                ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "CARGO COST", "PROFIT"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
+    }
+
+    public String gon(String fromStation, Ship s, int hops) {
+        Date start = new Date();
+        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
+        String query = "MATCH (commodity)<-[buy:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT*1.."+ hops +"]-(toSystem:System)-[:HAS]->(toStation:Station)-[sell:EXCHANGE]->(commodity)" 
+            + " WHERE fromStation.name={fromStation}"
+            + " AND buy.buyPrice > 0"
+            + " AND buy.supply >= {cargo}"
+            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
+            + " AND sell.sellPrice > 0"
+            + " AND sell.sellPrice > buy.buyPrice"
+            + " AND sell.demand >= {cargo}"
+            + " AND ALL(x IN shift WHERE x.ly <= {distance})"
+            + " RETURN DISTINCT" 
+            + " fromSystem.name as `FROM SYSTEM`," 
+            + " fromStation.name as `FROM STATION`," 
+            + " toStation.name as `TO STATION`," 
+            + " toSystem.name as `TO SYSTEM`," 
+            + " commodity.name as `COMMODITY`," 
+            + " buy.buyPrice AS `BUY @`,"
+            + " sell.sellPrice AS `SELL @`,"
+            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
+            + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
+            + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
+            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
+            + " ORDER BY `PROFIT` DESC"
+            + " LIMIT 5 ";   
+        
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);             
+        
+        if (results.size() == 0) {
+            return "No exchange available in provided range";
+        }
+        
+        List<Map<String, Object>> modifiedResultList = includeSavedExchangeIndexWithQueryResults(results); 
+        
+        List<String> columns = ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "PROFIT");
+               
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best trading solution within " + hops + " jump(s) @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR;
+        out += TableRenderer.renderMapDataAsTable(modifiedResultList, columns);
         
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
@@ -144,54 +201,6 @@ public class TradeService {
         out += results.size() + " Best 2 station trading solution within 1 jump of each other @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
         out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
                 ImmutableList.of("COMMODITY 1", "PROFIT 1", "SYSTEM 1", "STATION 1", "COMMODITY 2", "PROFIT 2", "SYSTEM 2", "STATION 2", "TRIP PROFIT"));
-        
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
-    }
-    
-
-    public String gon(String fromStation, Ship s, int hops) {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)<-[buy:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT*1.."+ hops +"]-(toSystem:System)-[:HAS]->(toStation:Station)-[sell:EXCHANGE]->(commodity)" 
-            + " WHERE fromStation.name={fromStation}"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.supply >= {cargo}"
-            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.sellPrice > buy.buyPrice"
-            + " AND sell.demand >= {cargo}"
-            + " AND ALL(x IN shift WHERE x.ly <= {distance})"
-            + " RETURN DISTINCT" 
-            + " fromSystem.name as `FROM SYSTEM`," 
-            + " fromStation.name as `FROM STATION`," 
-            + " toStation.name as `TO STATION`," 
-            + " toSystem.name as `TO SYSTEM`," 
-            + " commodity.name as `COMMODITY`," 
-            + " buy.buyPrice AS `BUY @`,"
-            + " sell.sellPrice AS `SELL @`,"
-            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
-            + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
-            + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
-            + " ORDER BY `PROFIT` DESC"
-            + " LIMIT 5 ";   
-        
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);             
-        
-        if (results.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        List<String> columns = ImmutableList.of("TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "PROFIT");
-               
-        String out = OsUtils.LINE_SEPARATOR;
-        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += results.size() + " Best trading solution within " + hops + " jump(s) @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR;
-        out += TableRenderer.renderMapDataAsTable(results, columns);
         
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
@@ -427,6 +436,45 @@ public class TradeService {
         
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
+    }
+    
+    /**
+     * resets lastSearchedExchanges
+     * with the results of the passed in query so long as the query has 
+     * FROM STATION, FROM SYSTEM, TO STATION, TO SYSTEM
+     * as returned values.
+     * 
+     * @param queryResults
+     */
+    protected List<Map<String,Object>> includeSavedExchangeIndexWithQueryResults(List<Map<String,Object>> queryResults) {
+        int i = 0;
+        lastSearchedExchanges.clear();
+        List<Map<String, Object>> modifiedResultList = new ArrayList<>();
+        for (Map<String, Object> result: queryResults) {
+            i++;
+            Map<String, Object> modifiedResult = new HashMap<>();
+            modifiedResult.putAll(result);
+            modifiedResult.put("#", i);
+            Exchange e = new Exchange(new Station((String)result.get("FROM STATION"), (String) result.get("FROM SYSTEM")), 
+                    new Station((String) result.get("TO STATION"), (String) result.get("TO SYSTEM")));
+            lastSearchedExchanges.put(i, e);
+            modifiedResultList.add(modifiedResult);
+        }
+        return modifiedResultList;
+    }
+
+    /**
+     * @return the lastSearchedExchanges
+     */
+    public Map<Integer, Exchange> getLastSearchedExchanges() {
+        return lastSearchedExchanges;
+    }
+
+    /**
+     * @param lastSearchedExchanges the lastSearchedExchanges to set
+     */
+    public void setLastSearchedExchanges(Map<Integer, Exchange> lastSearchedExchanges) {
+        this.lastSearchedExchanges = lastSearchedExchanges;
     }
     
 }

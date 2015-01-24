@@ -123,7 +123,7 @@ public class EliteOcrService {
                 }
                 
                 if (currentStation == null || !currentStation.getName().equals(splitLine[1].toUpperCase())) {
-                    currentStation = new Station(splitLine[1].toUpperCase());
+                    currentStation = new Station(splitLine[1].toUpperCase(), currentSystem.getName());
                     stations++;
                     stationService.createStationIfNotExists(currentSystem, currentStation);
                 }

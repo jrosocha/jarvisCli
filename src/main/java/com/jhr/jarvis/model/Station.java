@@ -2,11 +2,21 @@ package com.jhr.jarvis.model;
 
 public class Station {
 
+    private String system;
     private String name;
+    private long date;
     
-    public Station(String name) {
+    public Station(String name, String system) {
         super();
         this.name = name;
+        this.system = system;
+    }
+    
+    public Station(String name, String system, long date) {
+        super();
+        this.name = name;
+        this.system = system;
+        this.date = date;
     }
 
     /* (non-Javadoc)
@@ -14,7 +24,7 @@ public class Station {
      */
     @Override
     public String toString() {
-        return "Station [name=" + name + "]";
+        return "Station [system=" + system + ", name=" + name + ", date=" + date + "]";
     }
     
     /* (non-Javadoc)
@@ -66,5 +76,33 @@ public class Station {
      */
     public void setName(String name) {
         this.name = name;
+    }
+
+    /**
+     * @return the system
+     */
+    public String getSystem() {
+        return system;
+    }
+
+    /**
+     * @param system the system to set
+     */
+    public void setSystem(String system) {
+        this.system = system;
+    }
+
+    /**
+     * @return the date
+     */
+    public long getDate() {
+        return date;
+    }
+
+    /**
+     * @param date the date to set
+     */
+    public void setDate(long date) {
+        this.date = date;
     }
 }

@@ -12,10 +12,13 @@ import org.springframework.stereotype.Component;
 
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
+import com.jhr.jarvis.model.Exchange;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
+import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.service.CommodityService;
 import com.jhr.jarvis.service.ShipService;
+import com.jhr.jarvis.service.StarSystemService;
 import com.jhr.jarvis.service.StationService;
 import com.jhr.jarvis.service.TradeService;
 
@@ -30,6 +33,9 @@ public class TradeCommands implements CommandMarker {
 
     @Autowired
     private StationService stationService;
+    
+    @Autowired
+    private StarSystemService starSystemService;
 
     @Autowired
     private CommodityService commodityService;
@@ -37,7 +43,27 @@ public class TradeCommands implements CommandMarker {
     @Autowired
     private Settings settings;
     
-
+    @CliCommand(value = "select", help = "usage: select <1-5> Selects a trade route, determines a path, and sets your active station/system to the destination.")
+    public String select(
+            @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "1-5 option from your previous go(n) search.") String buffer) {
+        
+        String out = "";
+        int selection = Integer.parseInt(buffer);
+        
+        Exchange exchange = tradeService.getLastSearchedExchanges().get(selection);
+        if (exchange == null) {
+            return "Try running a go(n) command and then select a result!";
+        }
+        
+        stationService.setUserLastStoredStation(exchange.getTo());
+        try {
+            out += starSystemService.calculateShortestPathBetweenSystems(exchange.getFrom().getSystem(), exchange.getTo().getSystem(), shipService.loadShip().jumpDistance);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        return out;
+    }
     
     @CliCommand(value = { "gon", "gox" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
     public String gon(
@@ -53,7 +79,7 @@ public class TradeCommands implements CommandMarker {
                         + OsUtils.LINE_SEPARATOR
                         + "or try a ship cargo;distance;cash to set up your ship.";
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -79,7 +105,8 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.gon(foundStation, ship, jumpDistance);
+        out += tradeService.gon(foundStation.getName(), ship, jumpDistance);
+        out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your acive station to the trade destination.";
         
         return out;
     }
@@ -99,7 +126,7 @@ public class TradeCommands implements CommandMarker {
                         + "or try a ship cargo;distance;cash to set up your ship.";
         
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -126,7 +153,7 @@ public class TradeCommands implements CommandMarker {
         }
         
         try {
-            out += tradeService.gon2(foundStation, ship, jumpDistance);
+            out += tradeService.gon2(foundStation.getName(), ship, jumpDistance);
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
         }
@@ -148,7 +175,7 @@ public class TradeCommands implements CommandMarker {
                 + "or try a ship cargo;distance;cash to set up your ship.";;
         
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -170,10 +197,11 @@ public class TradeCommands implements CommandMarker {
         }
         
         try {
-            out += tradeService.go(foundStation, ship);
+            out += tradeService.go(foundStation.getName(), ship);
+            out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your acive station to the trade destination.";
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-        }
+        }        
         
         return out;
     }
@@ -192,7 +220,7 @@ public class TradeCommands implements CommandMarker {
                 + "or try a ship cargo;distance;cash to set up your ship.";;
 
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -214,7 +242,7 @@ public class TradeCommands implements CommandMarker {
         }
                 
         try {
-            out += tradeService.go2(foundStation, ship);
+            out += tradeService.go2(foundStation.getName(), ship);
         } catch (IOException e) {
             out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
         }
@@ -233,7 +261,7 @@ public class TradeCommands implements CommandMarker {
                         + OsUtils.LINE_SEPARATOR
                         + "Best resource sell price with n jumps of your jump distance.";
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -267,7 +295,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.sell(foundStation, ship, jumpDistance, foundCommodity);
+        out += tradeService.sell(foundStation.getName(), ship, jumpDistance, foundCommodity);
         return out;
     }
     
@@ -282,7 +310,7 @@ public class TradeCommands implements CommandMarker {
                         + OsUtils.LINE_SEPARATOR
                         + "Best resource buy price with n jumps of your jump distance.";
         String out = "";
-        String foundStation;
+        Station foundStation;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
@@ -316,7 +344,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.buy(foundStation, ship, jumpDistance, foundCommodity);
+        out += tradeService.buy(foundStation.getName(), ship, jumpDistance, foundCommodity);
         return out;
     }
  
@@ -335,8 +363,8 @@ public class TradeCommands implements CommandMarker {
                 + "or try a ship cargo;distance;cash to set up your ship.";;
         
         String out = "";
-        String foundStation;
-        String foundStation2;
+        Station foundStation;
+        Station foundStation2;
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
             foundStation2 = stationService.findUniqueStation(toStation, false);
@@ -358,7 +386,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.stationToStation(foundStation, ship, foundStation2);
+        out += tradeService.stationToStation(foundStation.getName(), ship, foundStation2.getName());
         return out;
     }
 

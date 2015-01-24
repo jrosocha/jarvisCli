@@ -5,7 +5,7 @@ This is a learning exercise for Neo4j and spring-shell in Java. If you like thes
 
 Anyways the DB looks like this:
 ```
-(:System)-[:FRAMESHIFY{ly:float}]-(:System)-[](:Station)-[:EXCHANGE{buyPrice:int, sellPrice:int, supply:int}]->(:Commodity)
+(:System)-[:FRAMESHIFY{ly:float}]-(:System)-[](:Station)-[:EXCHANGE{buyPrice:int, sellPrice:int, supply:int, demand:int, timestamp:long}]->(:Commodity)
 ```
 
 * Install Elite:Dangerous .. or all of this will really be boring

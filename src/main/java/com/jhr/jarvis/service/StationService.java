@@ -1,5 +1,6 @@
 package com.jhr.jarvis.service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +27,11 @@ public class StationService {
     
     @Autowired
     private CommodityService commodityService;
+    
+    @Autowired
+    private StarSystemService starSystemService;
        
-    private String userLastStoredStation = null;
+    private Station userLastStoredStation = null;
     
     /**
      * Gives an exact match on the station passed in, the unique station found matching what was passed in, the in memory store of a station of nothing was passed in, or an exception.
@@ -37,7 +41,7 @@ public class StationService {
      * @return
      * @throws StationNotFoundException
      */
-    public String getBestMatchingStationOrStoredStation(String station) throws StationNotFoundException {
+    public Station getBestMatchingStationOrStoredStation(String station) throws StationNotFoundException {
         
         if (station == null && getUserLastStoredStation() != null) {
             return getUserLastStoredStation();
@@ -56,9 +60,9 @@ public class StationService {
      * @return
      * @throws Exception
      */
-    public String findUniqueStation(String partial, boolean loadIntoMemory) throws StationNotFoundException {
+    public Station findUniqueStation(String partial, boolean loadIntoMemory) throws StationNotFoundException {
         
-        String foundStation = null;
+        Station foundStation = null;
         boolean found = false;
         
         try {
@@ -69,9 +73,9 @@ public class StationService {
         }
      
         if (!found) {
-            String query = "MATCH (station:Station)"
+            String query = "MATCH (system:System)-[:HAS]->(station:Station)"
                             + " WHERE station.name=~{stationName}"
-                            + " RETURN station.name";                
+                            + " RETURN system.name, station.name";                
     
             Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");
             List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
@@ -79,11 +83,11 @@ public class StationService {
             if (results.size() == 0 || results.size() > 1 ) {
                 throw new StationNotFoundException("Unique station could not be identified for '" + partial + "'.");
             }
-            
-            foundStation = (String) results.get(0).get("station.name");
+            foundStation = new Station((String) results.get(0).get("station.name"), (String) results.get(0).get("system.name"));
         }
+        
         if (loadIntoMemory) {
-            userLastStoredStation = foundStation; 
+            setUserLastStoredStation(foundStation);
         }
         return foundStation;
     }
@@ -96,12 +100,12 @@ public class StationService {
      * @return
      * @throws Exception 
      */
-    public String findExactStation(String station) throws StationNotFoundException {
-        String query = "MATCH (station:Station)"
+    public Station findExactStation(String station) throws StationNotFoundException {
+        String query = "MATCH (system:System)-[:HAS]->(station:Station)"
                 + " WHERE station.name={stationName}"
-                + " RETURN station.name";                
+                + " RETURN system.name, station.name";                
 
-        String foundStation = "";
+        Station foundStation = null;
         Map<String, Object> cypherParams = ImmutableMap.of("stationName", station.toUpperCase());
         
         List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
@@ -109,41 +113,29 @@ public class StationService {
         if (results.size() == 0 || results.size() > 1 ) {
             throw new StationNotFoundException("Exact station '" + station + "' could not be identified");
         }
-        foundStation = (String) results.get(0).get("station.name");
-        userLastStoredStation = foundStation;
+        foundStation = new Station((String) results.get(0).get("station.name"), (String) results.get(0).get("system.name"));
+        
+        setUserLastStoredStation(foundStation);
         return foundStation;
     }
 
-     /**
-     * Matches a starting starting with @param partial 
-     * If more than one station is found, returns \n separated string.
-     * If a single station is found, it is loaded into memory
-     * If none is found, returns a message to that effect.
-     * 
-     * @param partial
-     * @return
-     */
-    public String findStation(String partial) {
-        
-        String query = "MATCH (station:Station)"
-                        + " WHERE station.name=~{stationName}"
-                        + " RETURN station.name";                
 
-        String out = "";
-        Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");
+    public List<Station> findStations(String partial) {
         
+        String query = "MATCH (system:System)-[:HAS]->(station:Station)"
+                        + " WHERE station.name=~{stationName}"
+                        + " RETURN station.name, system.name";                
+
+        List<Station> out = new ArrayList<>();
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", partial.toUpperCase() + ".*");        
         List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
         
-        if (results.size() == 0) {
-            out += String.format("No station found with name starting with '%s'", partial);
-        } else {
-            for (Map<String, Object> res: results) {
-                out += res.get("station.name") + OsUtils.LINE_SEPARATOR;
-            }
+        for (Map<String, Object> res: results) {
+            out.add(new Station((String) res.get("station.name"), (String) res.get("system.name")));                
         }
         
-        if (results.size() == 1) {
-            userLastStoredStation = (String) results.get(0).get("station.name");
+        if (out.size() == 1) {
+            setUserLastStoredStation(out.get(0));
         }
         
         return out;
@@ -216,7 +208,7 @@ public class StationService {
         return out;
     }
     
-    public String stationDetails(String stationName) {
+    public String stationDetails(Station station) {
         
         String query = "MATCH (system:System)-[:HAS]->(station:Station)-[ex:EXCHANGE]->(commodity:Commodity)"
                      + "WHERE station.name = {stationName} "
@@ -229,7 +221,7 @@ public class StationService {
                      + "ex.demand AS `DEMAND`, "
                      + "ROUND((timestamp() - ex.date)/1000/60/60/24) AS `DAYS OLD`";
         
-        Map<String, Object> cypherParams = ImmutableMap.of("stationName", stationName);
+        Map<String, Object> cypherParams = ImmutableMap.of("stationName", station.getName());
         
         List<Map<String, Object>> result = graphDbService.runCypherNative(query, cypherParams);
         
@@ -269,18 +261,40 @@ public class StationService {
 
     }
     
+    public String joinStationsAsString(List<Station> stations) {
+        return stations.stream().map(s->{ return s.getName() + " @ " + s.getSystem();}).collect(Collectors.joining(OsUtils.LINE_SEPARATOR));
+    }
+    
+    public List<Station> getStationsForSystem(String system) {
+    
+        String query = "MATCH (system:System)-[:HAS]->(station:Station)-[ex:EXCHANGE]-(:Commodity)"
+                        + " WHERE system.name={systemName}"
+                        + " RETURN DISTINCT station.name, system.name, MAX(ex.date) AS LAST_UPDATED";                
+
+        List<Station> out = new ArrayList<>();
+        Map<String, Object> cypherParams = ImmutableMap.of("systemName", system);        
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, cypherParams);
+        
+        for (Map<String, Object> res: results) {
+            out.add(new Station((String) res.get("station.name"), (String) res.get("system.name"), (long) res.get("LAST_UPDATED")));                
+        }
+        
+        return out;
+    }
+    
     /**
      * @return the userLastStoredStation
      */
-    public String getUserLastStoredStation() {
+    public Station getUserLastStoredStation() {
         return userLastStoredStation;
     }
 
     /**
      * @param userLastStoredStation the userLastStoredStation to set
      */
-    public void setUserLastStoredStation(String findStationUniqueResult) {
-        this.userLastStoredStation = findStationUniqueResult;
+    public void setUserLastStoredStation(Station station) {
+        this.userLastStoredStation = station;
+        starSystemService.setUserLastStoredSystem(station.getSystem());
     }
     
 }
