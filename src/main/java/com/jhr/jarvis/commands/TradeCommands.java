@@ -134,7 +134,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.gon(foundStation.getName(), ship, jumpDistance);
+        out += tradeService.trade(foundStation.getName(), ship, jumpDistance);
         out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your active station to the trade destination.";
         
         return out;
@@ -183,7 +183,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.gon2(foundStation.getName(), ship, jumpDistance);
+        out += tradeService.trade2(foundStation.getName(), ship, jumpDistance);
         return out;
     }
     

@@ -36,10 +36,10 @@ public class TradeService {
     
     private Map<Integer, Exchange> lastSearchedExchanges = new HashMap<>(); 
 
-    public String gon(String fromStation, Ship s, int hops) {
+    public String trade(String fromStation, Ship s, int hops) {
         Date start = new Date();
         Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)<-[buy:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT*1.."+ hops +"]-(toSystem:System)-[:HAS]->(toStation:Station)-[sell:EXCHANGE]->(commodity)" 
+        String query = "MATCH (commodity:Commodity)<-[buy:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT*1.."+ hops +"]-(toSystem:System)-[:HAS]->(toStation:Station)-[sell:EXCHANGE]->(commodity:Commodity)" 
             + " WHERE fromStation.name={fromStation}"
             + " AND buy.buyPrice > 0"
             + " AND buy.supply >= {cargo}"
@@ -56,9 +56,7 @@ public class TradeService {
             + " commodity.name as `COMMODITY`," 
             + " buy.buyPrice AS `BUY @`,"
             + " sell.sellPrice AS `SELL @`,"
-            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
             + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
-            + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
             + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
             + " ORDER BY `PROFIT` DESC"
             + " LIMIT 5 ";   
@@ -84,72 +82,6 @@ public class TradeService {
         return out;
     }
     
-    /**
-     * provides a 2 stop trade solution for systems that are one jump apart
-     * 
-     * @throws JsonParseException
-     * @throws JsonMappingException
-     * @throws IOException
-     */
-    public String go2(String fromStation, Ship s) throws JsonParseException, JsonMappingException, IOException {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)-[buy:EXCHANGE]-(fSta:Station)-[:HAS]-(fSys:System)-[shift:FRAMESHIFT]-(tSys:System)-[:HAS]-(tSta:Station)-[sell:EXCHANGE]-(commodity)"
-            + " WHERE fSta.name={fromStation}"
-            + " AND shift.ly <= {distance}"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.supply > {cargo}"
-            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.demand >= {cargo}"
-            + " AND sell.sellPrice > buy.buyPrice"
-            + " WITH fSys as fromSystem,"
-            + " fSta as fromStation," 
-            + " tSta as toStation," 
-            + " tSys as toSystem," 
-            + " commodity as hop1Commodity," 
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as profit1," 
-            + " shift.ly as ly1"
-            + " MATCH (commodity2)-[buy2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT]-(tSys2:System)-[:HAS]-(tSta2:Station)-[sell2:EXCHANGE]-(commodity2)"
-            + " WHERE shift2.ly <= {distance}"
-            + " AND buy2.buyPrice > 0"
-            + " AND {cash} - (buy2.buyPrice * {cargo}) > 0"
-            + " AND buy2.supply > {cargo}"
-            + " AND sell2.sellPrice > 0"
-            + " AND sell2.sellPrice > buy2.buyPrice"
-            + " AND sell2.demand >= {cargo}"
-            + " RETURN DISTINCT"
-            + " fromSystem.name AS `FROM SYSTEM`,"
-            + " fromStation.name AS `FROM STATION`,"
-            + " hop1Commodity.name as `COMMODITY 1`,"
-            + " profit1 as `PROFIT 1`,"
-            + " toSystem.name as `SYSTEM 1`," 
-            + " toStation.name as `STATION 1`,"
-            + " commodity2.name as `COMMODITY 2`," 
-            + " (sell2.sellPrice * {cargo}) - (buy2.buyPrice * {cargo}) as `PROFIT 2`," 
-            + " tSys2.name as `SYSTEM 2`," 
-            + " tSta2.name as `STATION 2`," 
-            + " profit1 + ((sell2.sellPrice * {cargo}) - (buy2.buyPrice * {cargo})) as `TRIP PROFIT`"
-            + " ORDER BY `TRIP PROFIT` DESC"
-            + " LIMIT 5";
-        
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
-        
-        if (results.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        String out = OsUtils.LINE_SEPARATOR;
-        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += results.size() + " Best 2 station trading solution within 1 jump of each other @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
-                ImmutableList.of("COMMODITY 1", "PROFIT 1", "SYSTEM 1", "STATION 1", "COMMODITY 2", "PROFIT 2", "SYSTEM 2", "STATION 2", "TRIP PROFIT"));
-        
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
-    }
     
     /**
      * provides a 2 stop trade solution for systems that are 1..n jumps apart
@@ -158,7 +90,7 @@ public class TradeService {
      * @throws JsonMappingException
      * @throws IOException
      */
-    public String gon2(String fromStation, Ship s, int jumps) {
+    public String trade2(String fromStation, Ship s, int jumps) {
         Date start = new Date();
         Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
         String query = "MATCH (commodity)-[buy:EXCHANGE]-(fSta:Station)-[:HAS]-(fSys:System)-[shift:FRAMESHIFT*1.."+ jumps +"]-(tSys:System)-[:HAS]-(tSta:Station)-[sell:EXCHANGE]-(commodity)"
@@ -175,7 +107,9 @@ public class TradeService {
             + " tSta as toStation," 
             + " tSys as toSystem," 
             + " commodity as hop1Commodity," 
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as profit1" 
+            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as profit1"
+            + " ORDER BY profit1 DESC"
+            + " LIMIT 10"
             + " MATCH (commodity2)-[buy2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT*1.."+ jumps +"]-(tSys2:System)-[:HAS]-(tSta2:Station)-[sell2:EXCHANGE]-(commodity2)"
             + " WHERE buy2.buyPrice > 0"
             + " AND {cash} - (buy2.buyPrice * {cargo}) > 0"
@@ -487,6 +421,16 @@ public class TradeService {
         return modifiedResultList;
     }
 
+    public long exchangeCount() {
+        
+        long exchangeCount = 0;
+        String query = "MATCH ()-[e:EXCHANGE]->()"
+                + " RETURN COUNT(e) AS `EXCHANGE COUNT`";
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, new HashMap<>());
+        exchangeCount = (long) results.get(0).get("EXCHANGE COUNT");
+        return exchangeCount;
+    }
+    
     /**
      * @return the lastSearchedExchanges
      */

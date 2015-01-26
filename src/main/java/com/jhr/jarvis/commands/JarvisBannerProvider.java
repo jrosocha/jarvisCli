@@ -15,15 +15,31 @@
  */
 package com.jhr.jarvis.commands;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.shell.plugin.support.DefaultBannerProvider;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Component;
 
+import com.jhr.jarvis.service.ShipService;
+import com.jhr.jarvis.service.StarSystemService;
+import com.jhr.jarvis.service.StationService;
+import com.jhr.jarvis.service.TradeService;
+
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class JarvisBannerProvider extends DefaultBannerProvider  {
+    
+    @Autowired
+    private TradeService tradeService;
+
+    @Autowired
+    private StationService stationService;
+    
+    @Autowired
+    private StarSystemService starSystemService;
+
 
 	public String getBanner() {
 		StringBuffer buf = new StringBuffer();
@@ -33,12 +49,16 @@ public class JarvisBannerProvider extends DefaultBannerProvider  {
 		buf.append("*            --Jarvis--               *" +OsUtils.LINE_SEPARATOR);
 		buf.append("*                                     *"+ OsUtils.LINE_SEPARATOR);
 		buf.append("=======================================" + OsUtils.LINE_SEPARATOR);
-		buf.append("Version:" + this.getVersion());
+		buf.append("Version:          " + getVersion() + OsUtils.LINE_SEPARATOR);
+		buf.append("Systems:          " + starSystemService.systemCount() + OsUtils.LINE_SEPARATOR);
+		buf.append("Frameshift Edges: " + starSystemService.shiftCount() + OsUtils.LINE_SEPARATOR);
+		buf.append("Stations:         " + stationService.stationCount() + OsUtils.LINE_SEPARATOR);
+		buf.append("Exchanges:        " + tradeService.exchangeCount() + OsUtils.LINE_SEPARATOR);
 		return buf.toString();
 	}
 
 	public String getVersion() {
-		return "0.0.1";
+		return "3";
 	}
 
 	public String getWelcomeMessage() {

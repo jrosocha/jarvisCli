@@ -282,6 +282,16 @@ public class StationService {
         return out;
     }
     
+    public long stationCount() {
+        
+        long stationCount = 0;
+        String query = "MATCH (station:Station)"
+                + " RETURN COUNT(station) AS `STATION COUNT`";
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, new HashMap<>());
+        stationCount = (long) results.get(0).get("STATION COUNT");
+        return stationCount;
+    }
+    
     /**
      * @return the userLastStoredStation
      */

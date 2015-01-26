@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -301,6 +302,27 @@ public class StarSystemService {
         }
         
         return out;
+    }
+    
+    
+    public long systemCount() {
+        
+        long systemCount = 0;
+        String query = "MATCH (system:System)"
+        + " RETURN COUNT(system) AS `SYSTEM COUNT`";
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, new HashMap<>());
+        systemCount = (long) results.get(0).get("SYSTEM COUNT");
+        return systemCount;        
+    }
+
+    public long shiftCount() {
+        
+        long shiftCount = 0;
+        String query = "MATCH ()-[fs:FRAMESHIFT]->()"
+                + " RETURN COUNT(fs) AS `FRAMESHIFT COUNT`";
+        List<Map<String, Object>> results = graphDbService.runCypherNative(query, new HashMap<>());
+        shiftCount = (long) results.get(0).get("FRAMESHIFT COUNT");
+        return shiftCount;
     }
     
     private Function<String, StarSystem> parseCSVLineToSystem = line -> {

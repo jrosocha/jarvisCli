@@ -129,9 +129,6 @@ public class GraphDbService {
             return result.dumpToString();
         } 
     }
-    
-    
-
 
     /**
      * @return the graphDb
