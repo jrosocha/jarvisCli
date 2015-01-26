@@ -65,12 +65,12 @@ go2
 Computes a 2 stop within 1 jump of each other trade, starting with your current station and ship
 
 ```
-gon --jumps n 
+go --jumps n 
 ```
 Computes a one one stop trade within n jumps of your starting system. This takes a bit of time. On my system with --jumps 3, ~40 seconds.
 
 ```
-go2n --jumps 2 
+go2 --jumps 2 
 ```
 Computes a 2 stop trade within 2 jumps of each stop .. 3 or more makes this unusably slow, around 20 minutes. 2 should return in ~60 seconds)
 

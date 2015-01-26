@@ -35,60 +35,6 @@ public class TradeService {
     private ObjectMapper objectMapper;
     
     private Map<Integer, Exchange> lastSearchedExchanges = new HashMap<>(); 
-    
-    /**
-     * runs the 1 hop from where you are search, providing 5 best options
-     * 
-     * @throws JsonParseException
-     * @throws JsonMappingException
-     * @throws IOException
-     */
-    public String go(String fromStation, Ship s) throws JsonParseException, JsonMappingException, IOException {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)-[buy:EXCHANGE]-(fromStation:Station)-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT]-(toSystem:System)-[:HAS]-(toStation:Station)-[sell:EXCHANGE]-(commodity)" 
-            + " WHERE fromStation.name={fromStation}"
-            + " AND shift.ly <= {distance}"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.supply >= {cargo}"
-            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.demand >= {cargo}"            
-            + " AND sell.sellPrice > buy.buyPrice"
-            + " RETURN DISTINCT" 
-            + " fromSystem.name as `FROM SYSTEM`," 
-            + " fromStation.name as `FROM STATION`," 
-            + " toStation.name as `TO STATION`," 
-            + " toSystem.name as `TO SYSTEM`," 
-            + " commodity.name as `COMMODITY`," 
-            + " buy.buyPrice AS `BUY @`,"
-            + " sell.sellPrice AS `SELL @`,"
-            + " (sell.sellPrice - buy.buyPrice) as `UNIT PROFIT`,"
-            + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
-            + " (sell.sellPrice * {cargo}) as `CARGO SOLD FOR`,"
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
-            + " ORDER BY `PROFIT` DESC"
-            + " LIMIT 5 ";   
-        
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
-        
-        if (results.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        List<Map<String, Object>> modifiedResultList = includeSavedExchangeIndexWithQueryResults(results);        
-        
-        String out = OsUtils.LINE_SEPARATOR;
-        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += results.size() + " Best trading solution within 1 jump @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(modifiedResultList, 
-                ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "SELL @", "CARGO COST", "PROFIT"));
-        
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
-    }
 
     public String gon(String fromStation, Ship s, int hops) {
         Date start = new Date();
@@ -134,7 +80,6 @@ public class TradeService {
         out += results.size() + " Best trading solution within " + hops + " jump(s) @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
         out += OsUtils.LINE_SEPARATOR;
         out += TableRenderer.renderMapDataAsTable(modifiedResultList, columns);
-        
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
     }
@@ -213,7 +158,7 @@ public class TradeService {
      * @throws JsonMappingException
      * @throws IOException
      */
-    public String gon2(String fromStation, Ship s, int jumps) throws JsonParseException, JsonMappingException, IOException {
+    public String gon2(String fromStation, Ship s, int jumps) {
         Date start = new Date();
         Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
         String query = "MATCH (commodity)-[buy:EXCHANGE]-(fSta:Station)-[:HAS]-(fSys:System)-[shift:FRAMESHIFT*1.."+ jumps +"]-(tSys:System)-[:HAS]-(tSta:Station)-[sell:EXCHANGE]-(commodity)"
@@ -390,6 +335,85 @@ public class TradeService {
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
     }
+    
+    /**
+     * Sell a commodity, checks against all stations
+     * 
+     * @param fromStation
+     * @param ship
+     * @param jumps
+     * @param commodity
+     * @return
+     */
+    public String bestSell(String commodity) {
+        Date start = new Date();
+        Map<String, Object> cypherParams = ImmutableMap.of("commodity", commodity);
+        String query = "MATCH (toSystem:System)-[:HAS]-(toStation:Station)-[sell:EXCHANGE]-(commodity:Commodity)" 
+            + " WHERE sell.sellPrice > 0"
+            + " AND sell.demand > 0"
+            + " AND commodity.name = {commodity}" 
+            + " RETURN DISTINCT"
+            + " toStation.name as `TO STATION`," 
+            + " toSystem.name as `TO SYSTEM`," 
+            + " commodity.name as `COMMODITY`,"
+            + " sell.sellPrice as `UNIT PRICE`,"
+            + " sell.demand as `DEMAND`"
+            + " ORDER BY `UNIT PRICE` DESC"
+            + " LIMIT 10 ";   
+
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No sale available in data";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best stations to sell " + results.get(0).get("COMMODITY") + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE", "DEMAND"));
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
+    }
+    
+    /**
+     * Sell a commodity, checks against all stations
+     * 
+     * @param fromStation
+     * @param ship
+     * @param jumps
+     * @param commodity
+     * @return
+     */
+    public String bestBuy(String commodity) {
+        Date start = new Date();
+        Map<String, Object> cypherParams = ImmutableMap.of("commodity", commodity);
+        String query = "MATCH (toSystem:System)-[:HAS]-(toStation:Station)-[buy:EXCHANGE]-(commodity:Commodity)" 
+            + " WHERE buy.buyPrice > 0"
+            + " AND buy.supply > 0"
+            + " AND commodity.name = {commodity}" 
+            + " RETURN DISTINCT"
+            + " toStation.name as `TO STATION`," 
+            + " toSystem.name as `TO SYSTEM`," 
+            + " commodity.name as `COMMODITY`,"
+            + " buy.buyPrice as `UNIT PRICE`,"
+            + " buy.supply as `SUPPLY`"            
+            + " ORDER BY `UNIT PRICE` ASC"
+            + " LIMIT 10";   
+
+        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
+        
+        if (results.size() == 0) {
+            return "No buy available in data";
+        }
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += results.size() + " Best stations to buy " + results.get(0).get("COMMODITY") + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE", "SUPPLY"));     
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
+    }
+    
     
     public String stationToStation(String fromStation, Ship s, String toStation) {
         Date start = new Date();

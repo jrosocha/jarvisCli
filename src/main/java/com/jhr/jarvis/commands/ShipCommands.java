@@ -1,19 +1,15 @@
 package com.jhr.jarvis.commands;
 
-import java.io.IOException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
-import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.service.ShipService;
+import com.jhr.jarvis.util.DrawUtils;
 
 @Component
 public class ShipCommands implements CommandMarker {
@@ -23,6 +19,9 @@ public class ShipCommands implements CommandMarker {
     
     @Autowired
     private Settings settings;
+    
+    @Autowired
+    private DrawUtils drawUtils;
     
     @CliCommand(value = "ship", help = "usage: ship cargo;distance;cash \n Saves your ship for future commands.")
     public String obtainHelp(
@@ -36,15 +35,12 @@ public class ShipCommands implements CommandMarker {
             out += ship;
         } catch (Exception e) {
             try {
-                out += "usage: ship cargo;distance;cash" + OsUtils.LINE_SEPARATOR + shipService.loadShip();
-            } catch (JsonParseException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            } catch (JsonMappingException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            } catch (IOException e1) {
-                // TODO Auto-generated catch block
+                out += drawUtils.messageBox(3, 
+                        "Error: Invalid Use of 'ship' Command",
+                        "Usage:   ship cargo;distance;cash", 
+                        "Example: ship 44;10.0;1000000",
+                        shipService.loadShip().toString());
+            } catch (Exception e1) {
                 e1.printStackTrace();
             }
         }

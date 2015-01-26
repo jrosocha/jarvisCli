@@ -288,7 +288,7 @@ public class StarSystemService {
         
         String query = "MATCH (system:System)"
                         + " WHERE system.name=~{systemName}"
-                        + " RETURN system.name";                
+                        + " RETURN system.name, system.pos_x, system.pos_y, system.pos_z";                
 
         List<StarSystem> out = new ArrayList<>();
         Map<String, Object> cypherParams = ImmutableMap.of("systemName", (partial != null ? partial.toUpperCase() : "") + ".*");
@@ -297,7 +297,7 @@ public class StarSystemService {
         
         
         for (Map<String, Object> res: results) {
-            out.add(new StarSystem((String) res.get("system.name")));
+            out.add(new StarSystem((String) res.get("system.name"), (float) res.get("system.pos_x"), (float) res.get("system.pos_y"), (float) res.get("system.pos_z")));
         }
         
         return out;

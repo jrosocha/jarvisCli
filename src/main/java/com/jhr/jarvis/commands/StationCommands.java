@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.service.StationService;
+import com.jhr.jarvis.util.DrawUtils;
 
 @Component
 public class StationCommands implements CommandMarker {
@@ -22,26 +23,41 @@ public class StationCommands implements CommandMarker {
     private StationService stationService;
     
     @Autowired
+    private DrawUtils drawUtils;
+    
+    @Autowired
     private ObjectMapper objectMapper;
     
     @CliCommand(value = { "find" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
     public String find(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
-        String usage = "usage: find <partal station name>" 
-                + OsUtils.LINE_SEPARATOR
-                + "Identifies stations starting with user input. If a single system is returned, it is stored for future trade commands.";
-        
-        if (StringUtils.isEmpty(buffer)) {
-            return usage;
-        }
+        String usage1 = "Usage:       find <parial station name>";
+        String usage2 = "Description: Finds a station or stations starting with the input expression.";
+        String usage3 = "If a single system is returned, it is stored for future trade commands.";
+        String usage4 = "Example:     find goo";
         
         String out = "";
+        
+        if (StringUtils.isEmpty(buffer)) {
+            out += drawUtils.messageBox(3, 
+            "Error: Invalid Use of 'find' Command",
+            usage1,
+            usage2,
+            usage3,
+            usage4);
+            return out;
+        }
         
         List<Station> stations = stationService.findStations(buffer);
         if (stations.size() > 0) {
             out += stationService.joinStationsAsString(stations);
         } else {
-            out += "Not stations found starting with " + buffer;
+            out += drawUtils.messageBox(3, 
+            "No Stations Found Starting With '" + buffer + "'",
+            usage1,
+            usage2,
+            usage3,
+            usage4);
         }
         return out;
     }
@@ -49,12 +65,18 @@ public class StationCommands implements CommandMarker {
     @CliCommand(value = { "station" }, help = "usage: station Goo \n Find the station starting with the crap you typed.")
     public String stationDetails(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
-        String usage = "usage: station <partal station name>" 
-                + OsUtils.LINE_SEPARATOR
-                + "Identifies stations starting with user input. If a single system is returned, it is stored for future trade commands.";
+        String usage1 = "Usage:       station <parial station name>";
+        String usage2 = "Description: Finds a station starting with the input expression.";
+        String usage3 = "If a single system is returned, it is stored for future trade commands.";
+        String usage4 = "Example:     sta goo";
         
         if (StringUtils.isEmpty(buffer)) {
-            return usage;
+            return drawUtils.messageBox(3, 
+                    "Error: Invalid Use of 'station' Command",
+                    usage1,
+                    usage2,
+                    usage3,
+                    usage4);
         }
         
         Station station = null;
@@ -64,7 +86,12 @@ public class StationCommands implements CommandMarker {
             String out = null;
             out = stationService.joinStationsAsString(stationService.findStations(buffer));
             if (StringUtils.isEmpty(out)) {
-                out = "No stations found starting with: " + buffer + OsUtils.LINE_SEPARATOR;
+                out += drawUtils.messageBox(3, 
+                    "No Stations Found Starting With '" + buffer + "'",
+                    usage1,
+                    usage2,
+                    usage3,
+                    usage4);
             }
             return out;
         }

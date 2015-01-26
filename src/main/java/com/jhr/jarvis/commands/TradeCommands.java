@@ -1,6 +1,7 @@
 package com.jhr.jarvis.commands;
 
 import java.io.IOException;
+import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
+import com.jhr.jarvis.model.Commodity;
 import com.jhr.jarvis.model.Exchange;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
@@ -21,6 +23,7 @@ import com.jhr.jarvis.service.ShipService;
 import com.jhr.jarvis.service.StarSystemService;
 import com.jhr.jarvis.service.StationService;
 import com.jhr.jarvis.service.TradeService;
+import com.jhr.jarvis.util.DrawUtils;
 
 @Component
 public class TradeCommands implements CommandMarker {
@@ -43,65 +46,91 @@ public class TradeCommands implements CommandMarker {
     @Autowired
     private Settings settings;
     
+    @Autowired
+    private DrawUtils drawUtils;
+    
     @CliCommand(value = "select", help = "usage: select <1-5> Selects a trade route, determines a path, and sets your active station/system to the destination.")
     public String select(
             @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "1-5 option from your previous go(n) search.") String buffer) {
         
         String out = "";
-        int selection = Integer.parseInt(buffer);
+        Ship ship = null;
         
+        if (StringUtils.isEmpty(buffer)) {
+            out += drawUtils.messageBox(3, "Error: No select <number> passed in",
+                    "Usage: select <number>",
+                    "Selects a trade route, determines a path, and sets your active station/system to the destination.",
+                    "Try running a 'go' command and then 'select' a result!");
+             return out;
+        }
+        
+        int selection = Integer.parseInt(buffer);
         Exchange exchange = tradeService.getLastSearchedExchanges().get(selection);
         if (exchange == null) {
-            return "Try running a go(n) command and then select a result!";
+            out += drawUtils.messageBox(3, "Error: No exchange found",
+                   "Try running a 'go' command and then 'select' a result!");
+            return out;
+        }
+        
+        try {
+            ship = shipService.loadShip();
+        } catch (IOException e) {
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                                           "Check your write permissions in the ../data dir.");
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                                           "First set your ship with: ship cargo;distance;cash ");
+            return out;
         }
         
         stationService.setUserLastStoredStation(exchange.getTo());
-        try {
-            out += starSystemService.calculateShortestPathBetweenSystems(exchange.getFrom().getSystem(), exchange.getTo().getSystem(), shipService.loadShip().jumpDistance);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        
+        out += starSystemService.calculateShortestPathBetweenSystems(exchange.getFrom().getSystem(), exchange.getTo().getSystem(), ship.getJumpDistance());        
         return out;
     }
     
-    @CliCommand(value = { "gon", "gox" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
+    @CliCommand(value = { "go", "trade", "gon" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with n jumps of your jump distance. Takes 20 seconds or so for --jumps 3. ")
     public String gon(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
         ) {
         
-        String usage = "usage: gon --start 'Station Name' --jumps 2" 
-                        + OsUtils.LINE_SEPARATOR
-                        + "Best resource exchange within n jumps of your jump distance. Takes 20+ seconds or so for --jumps 3." 
-                        + OsUtils.LINE_SEPARATOR
-                        + "or try a find '<partial station match>'."
-                        + OsUtils.LINE_SEPARATOR
-                        + "or try a ship cargo;distance;cash to set up your ship.";
+        String usage1 = "Usage:   go --start 'Station Name' --jumps 2";
+        String usage2 = "Example: go (Will use last stored station)";
+        String usage3 = "Example: go --jumps 2 (best exchange within 2 jumps of your ship's jump distance)";
+        String usage4 = "or try a find '<partial station match>'.";
+        String usage5 = "or try a ship cargo;distance;cash to set up your ship.";
+        
         String out = "";
         Station foundStation;
+        Ship ship;
+        
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4, usage5);
             return out;
         }
         
-        int jumpDistance = 2;
+        int jumpDistance = 1;
         if (jumps != null) {
             jumpDistance = jumps;
         }
         
-        Ship ship;
         try {
             ship = shipService.loadShip();
         } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                                           "Check your write permissions in the ../data dir.");
             return out;
         }
         
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                                           "First set your ship with: ship cargo;distance;cash ");
             return out;
         }
         
@@ -111,145 +140,61 @@ public class TradeCommands implements CommandMarker {
         return out;
     }
     
-    @CliCommand(value = { "go2n", "go2x" }, help = "usage: gon --start 'Station Name' --jumps 2 \n Best resource exchange with 1..n jumps of your jump distance. Takes 30 seconds or so for --jumps 3. ")
+    @CliCommand(value = { "go2", "trade2" }, help = "usage: go2 --start 'Station Name' --jumps 2 \n Best resource exchange with 1..n jumps of your jump distance. Takes 30 seconds or so for --jumps 3. ")
     public String go2n(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
             @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
         ) {
         
-        String usage = "usage: go2n --start 'Station Name' --jumps 2" 
-                        + OsUtils.LINE_SEPARATOR
-                        + "Best resource exchange within 1..n jumps of your jump distance. Takes 20+ seconds or so for --jumps 3." 
-                        + OsUtils.LINE_SEPARATOR
-                        + "or try a find '<partial station match>'."
-                        + OsUtils.LINE_SEPARATOR
-                        + "or try a ship cargo;distance;cash to set up your ship.";
+        String usage1 = "Usage:   go2 --start 'Station Name' --jumps 2";
+        String usage2 = "Example: go2 (Will use last stored station)";
+        String usage3 = "Example: go2 --jumps 2 (best 2 stop exchange within 2 jumps of your ship's jump distance)";
+        String usage4 = "or try a find '<partial station match>'.";
+        String usage5 = "or try a ship cargo;distance;cash to set up your ship.";
         
         String out = "";
         Station foundStation;
+        Ship ship;
+        
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4, usage5);
             return out;
         }
         
-        int jumpDistance = 2;
+        int jumpDistance = 1;
         if (jumps != null) {
             jumpDistance = jumps;
         }
         
-        Ship ship;
         try {
             ship = shipService.loadShip();
         } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                                           "Check your write permissions in the ../data dir.");
             return out;
         }
         
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                                           "First set your ship with: ship cargo;distance;cash ");
             return out;
         }
         
-        try {
-            out += tradeService.gon2(foundStation.getName(), ship, jumpDistance);
-        } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-        }
-        
+        out += tradeService.gon2(foundStation.getName(), ship, jumpDistance);
         return out;
     }
     
-    @CliCommand(value = { "go", "go1" }, help = "usage: go --start 'Station Name' \n Single jump trading, not jumping more than one node.")
-    public String go(
-            @CliOption(key = { "start" }, mandatory = false, help = "--start Starting Station") final String station
-        ) {
-        
-        String usage = "usage: go --start 'Station Name'" 
-                + OsUtils.LINE_SEPARATOR
-                + "Single jump trading." 
-                + OsUtils.LINE_SEPARATOR
-                + "or try a find '<partial station match>'"
-                + OsUtils.LINE_SEPARATOR
-                + "or try a ship cargo;distance;cash to set up your ship.";;
-        
-        String out = "";
-        Station foundStation;
-        try {
-            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
-        } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-        
-        Ship ship;
-        try {
-            ship = shipService.loadShip();
-        } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
-            return out;
-        }
-        
-        try {
-            out += tradeService.go(foundStation.getName(), ship);
-            out += OsUtils.LINE_SEPARATOR + "Try 'select <1-5>' to select a trade route, calculate a path, and set your active station to the trade destination.";
-        } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-        }        
-        
-        return out;
-    }
-    
-    @CliCommand(value = "go2", help = "usage: go2 --start 'Station Name' \n 2 stop trading, not jumping more than one system.")
-    public String go2(
-            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station
-        ) {
-        
-        String usage = "usage: go --start 'Station Name'" 
-                + OsUtils.LINE_SEPARATOR
-                + "Single jump trading." 
-                + OsUtils.LINE_SEPARATOR
-                + "or try a find '<partial station match>'"
-                + OsUtils.LINE_SEPARATOR
-                + "or try a ship cargo;distance;cash to set up your ship.";;
-
-        String out = "";
-        Station foundStation;
-        try {
-            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
-        } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-        
-        Ship ship;
-        try {
-            ship = shipService.loadShip();
-        } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-        
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
-            return out;
-        }
-                
-        try {
-            out += tradeService.go2(foundStation.getName(), ship);
-        } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-        }
-        
-        return out;
-    }
-    
+    /**
+     * When you are trying to sell a commodity. 
+     * 
+     * @param station
+     * @param jumps
+     * @param commodity
+     * @return
+     */
     @CliCommand(value = { "sell" }, help = "usage: sell --start 'Station Name' --jumps 2 --commodity 'GOLD' \n Best resource sell price with n jumps of your jump distance.")
     public String sell(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
@@ -257,45 +202,52 @@ public class TradeCommands implements CommandMarker {
             @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
         ) {
         
-        String usage = "usage: sell --start 'Station Name' --jumps 2 --commodity 'GOLD'" 
-                        + OsUtils.LINE_SEPARATOR
-                        + "Best resource sell price with n jumps of your jump distance.";
+        String usage1 = "Usage: sell --start 'Station Name' --jumps 2 --commodity 'GOLD'";
+        String usage2=  "Omit --jumps and you search every station in the graph.";
+        String usage3=  "With --jumps Best resource sell price with n jumps of your jump distance.";
+        String usage4=  "With --jumps Depends on --start station or saved station, and your ship.";
+        
         String out = "";
         Station foundStation;
+        String foundCommodity;
+        
+        try {
+            foundCommodity = getBestMatchingCommodityOrStoredCommodity(commodity);
+        } catch (CommodityNotFoundException e) {          
+            out += drawUtils.messageBox(3, "Error: Commodity matching expression '" + commodity + "' not found",
+                    usage1, usage2, usage3, usage4);
+            return out;
+        }
+        
+        if (jumps == null) {
+            out += tradeService.bestSell(foundCommodity);
+            return out;
+        }
+        
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4);
             return out;
-        }
-        
-        String foundCommodity;
-        try {
-            foundCommodity = getBestMatchingCommodityOrStoredCommodity(commodity);
-        } catch (CommodityNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-        
-        int jumpDistance = 2;
-        if (jumps != null) {
-            jumpDistance = jumps;
         }
         
         Ship ship;
         try {
             ship = shipService.loadShip();
         } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                    "Check your write permissions in the ../data dir.");
             return out;
         }
         
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                    "First set your ship with: ship cargo;distance;cash ");
             return out;
         }
         
-        out += tradeService.sell(foundStation.getName(), ship, jumpDistance, foundCommodity);
+        out += tradeService.sell(foundStation.getName(), ship, jumps, foundCommodity);
         return out;
     }
     
@@ -306,45 +258,52 @@ public class TradeCommands implements CommandMarker {
             @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
         ) {
         
-        String usage = "usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD'" 
-                        + OsUtils.LINE_SEPARATOR
-                        + "Best resource buy price with n jumps of your jump distance.";
+        
+        String usage1 = "Usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD'";
+        String usage2=  "Omit --jumps and you search every station in the graph.";
+        String usage3=  "With --jumps Best resource buy price with n jumps of your jump distance.";
+        String usage4=  "With --jumps Depends on --start station or saved station, and your ship.";
         String out = "";
         Station foundStation;
+        String foundCommodity;
+
+        try {
+            foundCommodity = getBestMatchingCommodityOrStoredCommodity(commodity);
+        } catch (CommodityNotFoundException e) {          
+            out += drawUtils.messageBox(3, "Error: Commodity matching expression '" + commodity + "' not found",
+                    usage1, usage2, usage3, usage4);
+            return out;
+        }
+        
+        if (jumps == null) {
+            out += tradeService.bestBuy(foundCommodity);
+            return out;
+        }
+        
         try {
             foundStation = stationService.getBestMatchingStationOrStoredStation(station);
         } catch (StationNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4);
             return out;
         }
-        
-        String foundCommodity;
-        try {
-            foundCommodity = getBestMatchingCommodityOrStoredCommodity(commodity);
-        } catch (CommodityNotFoundException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-            return out;
-        }
-        
-        int jumpDistance = 2;
-        if (jumps != null) {
-            jumpDistance = jumps;
-        }
-        
+      
         Ship ship;
         try {
             ship = shipService.loadShip();
         } catch (IOException e) {
-            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                    "Check your write permissions in the ../data dir.");
             return out;
         }
         
-        if (shipService.isShipEmpty(ship)) {
-            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                    "First set your ship with: ship cargo;distance;cash ");
             return out;
         }
         
-        out += tradeService.buy(foundStation.getName(), ship, jumpDistance, foundCommodity);
+        out += tradeService.buy(foundStation.getName(), ship, jumps, foundCommodity);
         return out;
     }
  
@@ -396,7 +355,11 @@ public class TradeCommands implements CommandMarker {
     protected String getBestMatchingCommodityOrStoredCommodity(String commodity) throws CommodityNotFoundException {
         
         if (commodity == null && commodityService.getUserLastStoredCommodity() != null) {
-            return commodityService.getUserLastStoredCommodity();
+            String c =  commodityService.getUserLastStoredCommodity();
+            if (StringUtils.isEmpty(c)) {
+                throw new CommodityNotFoundException("No unique commodity could be found.");
+            }
+            return c;
         } else if (!StringUtils.isEmpty(commodity)) {
             return commodityService.findUniqueCommodity(commodity);            
         }
