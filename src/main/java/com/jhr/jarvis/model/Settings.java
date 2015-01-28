@@ -22,6 +22,8 @@ public class Settings {
     
     private String graphDb = null;
     
+    private String orientGraphDb = null;
+    
     private String systemsFile = null;
     
     private String commodityFile = null;
@@ -193,6 +195,20 @@ public class Settings {
      */
     public void setShipFile(String shipFile) {
         this.shipFile = shipFile;
+    }
+
+    /**
+     * @return the orientGraphDb
+     */
+    public String getOrientGraphDb() {
+        return orientGraphDb;
+    }
+
+    /**
+     * @param orientGraphDb the orientGraphDb to set
+     */
+    public void setOrientGraphDb(String orientGraphDb) {
+        this.orientGraphDb = orientGraphDb;
     }
 
 }

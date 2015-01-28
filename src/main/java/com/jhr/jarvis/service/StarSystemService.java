@@ -33,6 +33,11 @@ import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientEdge;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 @Service
 public class StarSystemService {
@@ -46,6 +51,9 @@ public class StarSystemService {
     private GraphDbService graphDbService;
     
     @Autowired
+    private OrientDbService orientDbService;
+    
+    @Autowired
     private Settings settings;
     
     /**
@@ -55,14 +63,65 @@ public class StarSystemService {
 
     private static final DynamicRelationshipType FRAMESHIFT_REL = DynamicRelationshipType.withName("FRAMESHIFT");
     
-    public Set<StarSystem> closeStarSystems(final StarSystem s, final float distance) {
+    public Set<Vertex> findStationsInSystem(Vertex system) {
+        Set<Vertex> stationsInSystem = new HashSet<>();
+        for(Edge hasEdge: system.getEdges(com.tinkerpop.blueprints.Direction.OUT, "Has")) {
+            Vertex station = hasEdge.getVertex(com.tinkerpop.blueprints.Direction.IN);
+            stationsInSystem.add(station);
+        }
+        return stationsInSystem;  
+    }
+    
+    public Set<Vertex> findSystemsWithinOneFrameshiftJumpOfDistance(Vertex system, float jumpDistance) {
+        
+        Set<Vertex> systemsWithinOneJumpOfDistance = new HashSet<>();
+        
+        for (Edge edgeFrameshift: system.getEdges(com.tinkerpop.blueprints.Direction.BOTH, "Frameshift")) {
+            double ly = edgeFrameshift.getProperty("ly");
+            if (ly > jumpDistance) {
+                // ignore any shift that is out of range
+                continue;
+            }
+            
+            // because we cant tell what direction the edge is from system--shift--system, just try both.  
+            Vertex destinationSystem= null;
+            destinationSystem = edgeFrameshift.getVertex(com.tinkerpop.blueprints.Direction.IN);
+            if (destinationSystem == null || destinationSystem.getProperty("name").equals(system.getProperty("name"))) {
+                destinationSystem = edgeFrameshift.getVertex(com.tinkerpop.blueprints.Direction.OUT);
+            }
+            
+            if (destinationSystem == null) {
+                continue;
+            }
+            
+            systemsWithinOneJumpOfDistance.add(destinationSystem);           
+        }
+        
+        return systemsWithinOneJumpOfDistance;
+    }
+    
+    
+    
+    public Set<Vertex> findSystemsWithinNFrameshiftJumpsOfDistance(Vertex system, float jumpDistance, int jumps) {
+        
+        //"traverse in_Frameshift, out_Frameshift, Frameshift.in, Frameshift.out from #11:4 while $depth <= 4"
+        // select from (traverse in_Frameshift, out_Frameshift, Frameshift.in, Frameshift.out from #11:4 while $depth <= 4 and (@class = 'System' or (@class = 'Frameshift' and ly < 10.0))) where @class = 'System'
+        Set<Vertex> systemsWithinNJumpOfDistance = new HashSet<>();
+        OrientVertex o = (OrientVertex) system;
+        o.traverse().fields("in_Frameshift", "out_Frameshift", "Frameshift.in", "Frameshift.out")
+                
+        return systemsWithinNJumpOfDistance;
+    }
+    
+    
+    public Set<StarSystem> closeStarSystems(final StarSystem s, final float withinDistance) {
         
         if (starSystemData == null) {
            return new HashSet<StarSystem>();
         }
         
         Set<StarSystem> closeSystems = starSystemData.parallelStream().filter(s2->{ 
-            return Math.sqrt( (Math.pow((s.getX()-s2.getX()),2.0)+Math.pow((s.getY()-s2.getY()),2.0)+Math.pow((s.getZ()-s2.getZ()),2.0))) <= distance;
+            return distanceCalc(s.getX(),s2.getX(),s.getY(),s2.getY(),s.getZ(), s2.getZ()) <= withinDistance;
         }).collect(Collectors.toSet());
         
         return closeSystems;        
@@ -115,6 +174,52 @@ public class StarSystemService {
         String out = graphDbService.runCypherWithTransaction("MERGE (system:System {name:{name}, pos_x:{x}, pos_y:{y}, pos_z:{z}});", cypherParams);
         return out;
     }
+    
+    public void saveSystemToOrient(StarSystem system) {
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            
+            OrientVertex vertexSystem = (OrientVertex) graph.getVertexByKey("System.name", system.getName());
+            if (vertexSystem == null) {
+                
+                vertexSystem = graph.addVertex("class:System");
+                vertexSystem.setProperty("name", system.getName());
+                vertexSystem.setProperty("x", system.getX());
+                vertexSystem.setProperty("y", system.getY());
+                vertexSystem.setProperty("z", system.getZ());
+                
+                // for each system within the defined distance, add an edge
+                for (Vertex vertexSystem2 : graph.getVerticesOfClass("System")) {
+                    // the these 2 are not the save vertex
+                    if (!vertexSystem2.getProperty("name").equals(vertexSystem.getProperty("name"))) {
+                        double distance = distanceCalc(vertexSystem.getProperty("x"), vertexSystem2.getProperty("x"), vertexSystem.getProperty("y"), vertexSystem2.getProperty("y"), vertexSystem.getProperty("z"), vertexSystem2.getProperty("z"));
+                        // verify edge is inside the max edge range
+                        if (distance > settings.getLongestDistanceEdge()) {
+                            // and edge too far
+                            continue;
+                        }
+                        // verify edge does not exist
+                        String edgeId = createFrameshiftEdgeId(vertexSystem.getProperty("name"), vertexSystem2.getProperty("name"));
+                        OrientEdge frameshiftEdge = graph.getEdge(edgeId);
+                        if (frameshiftEdge == null) {
+                            System.out.println("Creating Edge:" + edgeId);
+                            frameshiftEdge = graph.addEdge(edgeId, vertexSystem, vertexSystem2, "Frameshift");
+                            frameshiftEdge.setProperty("ly", distance);
+                        }
+                    }
+                }
+            }
+            graph.commit();
+        } catch( Exception e ) {
+            e.printStackTrace();
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+    }
+    
     
     /**
      * Creates 'FRAMESHIFT' edges between this system and all other systems if they do not exist. Calculates distances.
@@ -304,6 +409,31 @@ public class StarSystemService {
         return out;
     }
     
+    public long systemCountOrientDb() {
+        
+        long systemCount = 0;
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            systemCount = graph.countVertices("System");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return systemCount;        
+    }
+    
+    public long shiftCountOrientDb() {
+        
+        long shiftCount = 0;
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            shiftCount = graph.countEdges("Frameshift");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return shiftCount;
+    }
     
     public long systemCount() {
         
@@ -332,6 +462,15 @@ public class StarSystemService {
         return s;
     };
 
+    
+    private String createFrameshiftEdgeId(String systemName1, String systemName2) {        
+        return (systemName1.compareTo(systemName2) < 0) ? (systemName1 + '-' + systemName2) : (systemName2 + '-' + systemName1);
+    }
+    
+    private double distanceCalc(float x1, float x2, float y1, float y2, float z1, float z2) {
+        return Math.sqrt((Math.pow((x1-x2),2.0)+Math.pow((y1-y2),2.0)+Math.pow((z1-z2),2.0)));
+    }
+    
     /**
      * @return the userLastStoredSystem
      */

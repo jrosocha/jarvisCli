@@ -1,10 +1,15 @@
 package com.jhr.jarvis.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Station {
 
     private String system;
     private String name;
     private long date;
+    
+    private Map<String,Commodity> availableCommodityExchanges = new HashMap<>();
     
     public Station(String name, String system) {
         super();
@@ -17,6 +22,10 @@ public class Station {
         this.name = name;
         this.system = system;
         this.date = date;
+    }
+
+    public Station() {
+        super();
     }
 
     /* (non-Javadoc)
@@ -104,5 +113,19 @@ public class Station {
      */
     public void setDate(long date) {
         this.date = date;
+    }
+
+    /**
+     * @return the availableCommodityExchanges
+     */
+    public Map<String, Commodity> getAvailableCommodityExchanges() {
+        return availableCommodityExchanges;
+    }
+
+    /**
+     * @param availableCommodityExchanges the availableCommodityExchanges to set
+     */
+    public void setAvailableCommodityExchanges(Map<String, Commodity> availableCommodityExchanges) {
+        this.availableCommodityExchanges = availableCommodityExchanges;
     }
 }

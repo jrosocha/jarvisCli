@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.model.Commodity;
-import com.jhr.jarvis.model.Exchange;
+import com.jhr.jarvis.model.SavedExchange;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.Station;
@@ -65,8 +65,8 @@ public class TradeCommands implements CommandMarker {
         }
         
         int selection = Integer.parseInt(buffer);
-        Exchange exchange = tradeService.getLastSearchedExchanges().get(selection);
-        if (exchange == null) {
+        SavedExchange savedExchange = tradeService.getLastSearchedExchanges().get(selection);
+        if (savedExchange == null) {
             out += drawUtils.messageBox(3, "Error: No exchange found",
                    "Try running a 'go' command and then 'select' a result!");
             return out;
@@ -86,8 +86,8 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        stationService.setUserLastStoredStation(exchange.getTo());
-        out += starSystemService.calculateShortestPathBetweenSystems(exchange.getFrom().getSystem(), exchange.getTo().getSystem(), ship.getJumpDistance());        
+        stationService.setUserLastStoredStation(savedExchange.getTo());
+        out += starSystemService.calculateShortestPathBetweenSystems(savedExchange.getFrom().getSystem(), savedExchange.getTo().getSystem(), ship.getJumpDistance());        
         return out;
     }
     
@@ -366,4 +366,52 @@ public class TradeCommands implements CommandMarker {
         
         throw new CommodityNotFoundException("No unique commodity could be found.");
     }
+    
+    @CliCommand(value = { "otrade" }, help = "...")
+    public String otrade(
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
+            @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps
+        ) {
+        
+        String usage1 = "Usage:   go2 --start 'Station Name' --jumps 2";
+        String usage2 = "Example: go2 (Will use last stored station)";
+        String usage3 = "Example: go2 --jumps 2 (best 2 stop exchange within 2 jumps of your ship's jump distance)";
+        String usage4 = "or try a find '<partial station match>'.";
+        String usage5 = "or try a ship cargo;distance;cash to set up your ship.";
+        
+        String out = "";
+        Station foundStation;
+        Ship ship;
+        
+        try {
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
+        } catch (StationNotFoundException e) {
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4, usage5);
+            return out;
+        }
+        
+        int jumpDistance = 1;
+        if (jumps != null) {
+            jumpDistance = jumps;
+        }
+        
+        try {
+            ship = shipService.loadShip();
+        } catch (IOException e) {
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                                           "Check your write permissions in the ../data dir.");
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                                           "First set your ship with: ship cargo;distance;cash ");
+            return out;
+        }
+        
+        out += tradeService.tradeOrientDb(foundStation.getName(), ship, jumpDistance);
+        return out;
+    }
+    
 }

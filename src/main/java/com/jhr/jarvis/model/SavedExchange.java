@@ -1,11 +1,11 @@
 package com.jhr.jarvis.model;
 
-public class Exchange {
+public class SavedExchange {
     
     private Station from;
     private Station to;
     
-    public Exchange(Station from, Station to) {
+    public SavedExchange(Station from, Station to) {
         super();
         this.from = from;
         this.to = to;

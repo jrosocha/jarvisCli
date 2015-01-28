@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.parboiled.common.ImmutableList;
@@ -15,9 +16,16 @@ import org.springframework.stereotype.Service;
 import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
 import com.jhr.jarvis.model.Commodity;
+import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientEdge;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 @Service
 public class StationService {
@@ -30,8 +38,53 @@ public class StationService {
     
     @Autowired
     private StarSystemService starSystemService;
+    
+    @Autowired
+    private OrientDbService orientDbService;
        
     private Station userLastStoredStation = null;
+    
+    
+    public Map<String, Commodity> getStationBuyCommodities(Vertex stationVertex, Ship ship) {
+        Map<String, Commodity> stationBuyCommodities = new HashMap<>();
+        for (Edge exchange: stationVertex.getEdges(Direction.OUT, "Exchange")) {            
+
+            int sellPrice = exchange.getProperty("sellPrice");
+            int buyPrice = exchange.getProperty("buyPrice");
+            int supply = exchange.getProperty("supply");
+            int demand = exchange.getProperty("demand");
+                       
+            if (buyPrice > 0 && supply >= ship.getCargoSpace() && (buyPrice * ship.getCargoSpace()) <= ship.getCash()) {
+                Vertex commodityVertex = exchange.getVertex(Direction.IN);
+                Commodity commodity = new Commodity(commodityVertex.getProperty("name"), buyPrice, supply, sellPrice, demand);
+                stationBuyCommodities.put(commodity.getName(), commodity);
+            }
+        }
+        return stationBuyCommodities;
+    }
+    
+    public Map<String, Commodity> getReleventStationSellCommodities(Vertex stationVertex, Map<String, Commodity> buyCommodities, Ship ship) {
+        Map<String, Commodity> stationSellReleventCommodities = new HashMap<>();
+        for (Edge exchange: stationVertex.getEdges(Direction.OUT, "Exchange")) {            
+
+            int sellPrice = exchange.getProperty("sellPrice");
+            int buyPrice = exchange.getProperty("buyPrice");
+            int supply = exchange.getProperty("supply");
+            int demand = exchange.getProperty("demand");
+            
+            if (demand > ship.getCargoSpace() && sellPrice > 0) {
+                Vertex commodityVertex = exchange.getVertex(Direction.IN);
+                Commodity sellCommodity = new Commodity(commodityVertex.getProperty("name"), buyPrice, supply, sellPrice, demand);
+                Commodity boughtCommodity = buyCommodities.get(sellCommodity.getName());
+                
+                if (boughtCommodity != null && boughtCommodity.getBuyPrice() < sellCommodity.getSellPrice()) {
+                    stationSellReleventCommodities.put(sellCommodity.getName(), sellCommodity);
+                }
+            }
+        }
+        
+        return stationSellReleventCommodities;
+    }
     
     /**
      * Gives an exact match on the station passed in, the unique station found matching what was passed in, the in memory store of a station of nothing was passed in, or an exception.
@@ -140,6 +193,91 @@ public class StationService {
         
         return out;
     }
+    
+    
+    
+    /**
+     * Creates a station and its HAS with its system is the station is not yet present in the graph.
+     * 
+     * @param system
+     * @param station
+     * @return
+     */
+    public void createStationOrientDb(StarSystem system, Station station) {
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", station.getName());
+            if (vertexStation == null) {
+                vertexStation = graph.addVertex("class:Station");
+                vertexStation.setProperty("name", station.getName());
+                
+                OrientVertex vertexSystem = (OrientVertex) graph.getVertexByKey("System.name", system.getName());
+                graph.addEdge(vertexSystem.getProperty("name") + "-" + station.getName(), vertexSystem, vertexStation, "Has");
+                
+            }
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+    }
+    
+    public void createCommodityExchangeRelationshipOrientDb(Station station, Commodity commodity, int sellPrice, int buyPrice, int supply, int demand, long date) {
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", station.getName());
+            OrientVertex vertexCommodity = (OrientVertex) graph.getVertexByKey("Commodity.name", commodity.getName());
+            OrientEdge edgeExchange = graph.addEdge(station.getName() + "-" + commodity.getName(), vertexStation, vertexCommodity, "Exchange");
+            edgeExchange.setProperty("sellPrice", sellPrice);
+            edgeExchange.setProperty("buyPrice", buyPrice);
+            edgeExchange.setProperty("supply", supply);
+            edgeExchange.setProperty("demand", demand);
+            edgeExchange.setProperty("date", date);
+            graph.commit();
+        } catch (Exception e) {
+            graph.rollback();
+        }
+    }
+
+    public void createCommodityOrientDb(Commodity commodity) {
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexCommodity = (OrientVertex) graph.getVertexByKey("Commodity.name", commodity.getName());
+            if (vertexCommodity == null) {
+                vertexCommodity = graph.addVertex("class:Commodity");
+                vertexCommodity.setProperty("name", commodity.getName());
+            }
+            graph.commit();
+        } catch (Exception e) {
+            graph.rollback();
+        }
+    }
+    
+    public int clearStationOfExchangesOrientDb(Station station) {
+        int edgesRemoved = 0;
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", station.getName());
+            for (Edge exchange: vertexStation.getEdges(Direction.OUT, "Exchange")) {
+                exchange.remove();
+                edgesRemoved++;
+            };
+            
+        } catch (Exception e) {
+            graph.rollback();
+        }
+        return edgesRemoved;
+    }
+    
     
     /**
      * Creates a station and its HAS with its system is the station is not yet present in the graph.
@@ -280,6 +418,19 @@ public class StationService {
         }
         
         return out;
+    }
+
+    public long stationCountOrientDb() {
+        
+        long stationCount = 0;
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            stationCount = graph.countVertices("Station");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return stationCount;        
     }
     
     public long stationCount() {

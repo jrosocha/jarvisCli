@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,11 +18,19 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.jhr.jarvis.model.Exchange;
+import com.google.common.collect.Lists;
+import com.jhr.jarvis.model.BestExchange;
+import com.jhr.jarvis.model.Commodity;
+import com.jhr.jarvis.model.SavedExchange;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 @Service
 public class TradeService {
@@ -34,8 +44,75 @@ public class TradeService {
     @Autowired
     private ObjectMapper objectMapper;
     
-    private Map<Integer, Exchange> lastSearchedExchanges = new HashMap<>(); 
+    @Autowired
+    private StationService stationService;
+    
+    @Autowired
+    private StarSystemService starSystemService;
+    
+    @Autowired
+    private OrientDbService orientDbService;
+    
+    private Map<Integer, SavedExchange> lastSearchedExchanges = new HashMap<>(); 
 
+    
+    public String tradeOrientDb(String fromStationName, Ship ship, int maxJumps) {
+        
+        Date start = new Date();
+        
+        String out = "WIP";
+        Station fromStation = new Station();
+        OrientGraph graph = orientDbService.getFactory().getTx();
+        
+        List<BestExchange> bestExchangeList = new ArrayList<>();
+        
+        
+        //starting station
+        OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", fromStationName);
+        fromStation.setName(vertexStation.getProperty("name"));
+        
+        // populate worthwile buy commodities
+        Map<String, Commodity> buyCommodities = stationService.getStationBuyCommodities(vertexStation, ship);
+        
+        // get a system for a station.
+        Vertex originSystem= null;
+        for (Edge hasEdge: vertexStation.getEdges(Direction.IN, "Has")) {
+            originSystem = hasEdge.getVertex(Direction.OUT);
+            fromStation.setSystem(originSystem.getProperty("name"));
+        }
+        
+        Set<Vertex> systemsWithinOneShipJump = starSystemService.findSystemsWithinOneFrameshiftJumpOfDistance(originSystem, ship.getJumpDistance());
+        
+        for (Vertex destinationSystem: systemsWithinOneShipJump) {
+            
+            String destinationSystemName = destinationSystem.getProperty("name");
+            Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+            
+            for (Vertex station: systemStations) {
+                Station toStation = new Station(station.getProperty("name"), destinationSystemName);
+                Map<String, Commodity> sellCommodities = stationService.getReleventStationSellCommodities(station, buyCommodities, ship);
+                
+                for (String commodity: sellCommodities.keySet()) {
+                    
+                    Commodity buyCommodity = buyCommodities.get(commodity);
+                    Commodity sellCommodity = sellCommodities.get(commodity);
+                    BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity);
+                    // add the exchange to the master list.
+                    bestExchangeList.add(bestExchange);   
+                }
+            }
+        }
+        
+        List<BestExchange> sortedBestExchangeList =  bestExchangeList.parallelStream().sorted((a,b)->{ return Integer.compare(a.getPerUnitProfit(), b.getPerUnitProfit()); }).collect(Collectors.toList());
+        sortedBestExchangeList = Lists.reverse(sortedBestExchangeList);
+        
+        System.out.println("Finished in '" + (new Date().getTime() - start.getTime()) + " ms");
+        System.out.println("Exchanges found: " + sortedBestExchangeList.size());
+        
+        return sortedBestExchangeList.toString();        
+    }
+    
+    
     public String trade(String fromStation, Ship s, int hops) {
         Date start = new Date();
         Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
@@ -413,7 +490,7 @@ public class TradeService {
             Map<String, Object> modifiedResult = new HashMap<>();
             modifiedResult.putAll(result);
             modifiedResult.put("#", i);
-            Exchange e = new Exchange(new Station((String)result.get("FROM STATION"), (String) result.get("FROM SYSTEM")), 
+            SavedExchange e = new SavedExchange(new Station((String)result.get("FROM STATION"), (String) result.get("FROM SYSTEM")), 
                     new Station((String) result.get("TO STATION"), (String) result.get("TO SYSTEM")));
             lastSearchedExchanges.put(i, e);
             modifiedResultList.add(modifiedResult);
@@ -421,6 +498,19 @@ public class TradeService {
         return modifiedResultList;
     }
 
+    public long exchangeCountOrientDb() {
+        
+        long exchangeCount = 0;
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            exchangeCount = graph.countEdges("Exchange");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return exchangeCount;
+    }
+    
     public long exchangeCount() {
         
         long exchangeCount = 0;
@@ -434,14 +524,14 @@ public class TradeService {
     /**
      * @return the lastSearchedExchanges
      */
-    public Map<Integer, Exchange> getLastSearchedExchanges() {
+    public Map<Integer, SavedExchange> getLastSearchedExchanges() {
         return lastSearchedExchanges;
     }
 
     /**
      * @param lastSearchedExchanges the lastSearchedExchanges to set
      */
-    public void setLastSearchedExchanges(Map<Integer, Exchange> lastSearchedExchanges) {
+    public void setLastSearchedExchanges(Map<Integer, SavedExchange> lastSearchedExchanges) {
         this.lastSearchedExchanges = lastSearchedExchanges;
     }
     

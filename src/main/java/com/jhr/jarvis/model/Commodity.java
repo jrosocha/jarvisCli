@@ -5,6 +5,11 @@ public class Commodity {
     private String name;
     private String group;
     
+    private int buyPrice;
+    private int supply;
+    private int sellPrice;
+    private int demand;
+    
     public Commodity(String name) {
         super();
         this.name = name;
@@ -14,6 +19,15 @@ public class Commodity {
         super();
         this.name = name;
         this.group = group;
+    }
+    
+    public Commodity(String name, int buyPrice, int supply, int sellPrice, int demand) {
+        super();
+        this.name = name;
+        this.buyPrice = buyPrice;
+        this.supply = supply;
+        this.sellPrice = sellPrice;
+        this.demand = demand;
     }
     
     /* (non-Javadoc)
@@ -87,6 +101,62 @@ public class Commodity {
      */
     public void setGroup(String group) {
         this.group = group;
+    }
+
+    /**
+     * @return the buyPrice
+     */
+    public int getBuyPrice() {
+        return buyPrice;
+    }
+
+    /**
+     * @param buyPrice the buyPrice to set
+     */
+    public void setBuyPrice(int buyPrice) {
+        this.buyPrice = buyPrice;
+    }
+
+    /**
+     * @return the supply
+     */
+    public int getSupply() {
+        return supply;
+    }
+
+    /**
+     * @param supply the supply to set
+     */
+    public void setSupply(int supply) {
+        this.supply = supply;
+    }
+
+    /**
+     * @return the sellPrice
+     */
+    public int getSellPrice() {
+        return sellPrice;
+    }
+
+    /**
+     * @param sellPrice the sellPrice to set
+     */
+    public void setSellPrice(int sellPrice) {
+        this.sellPrice = sellPrice;
+    }
+
+    /**
+     * @return the demand
+     */
+    public int getDemand() {
+        return demand;
+    }
+
+    /**
+     * @param demand the demand to set
+     */
+    public void setDemand(int demand) {
+        this.demand = demand;
     }
 
 }
