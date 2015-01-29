@@ -1,5 +1,8 @@
 package com.jhr.jarvis.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class BestExchange {
 
     private String buySystemName;
@@ -14,13 +17,13 @@ public class BestExchange {
     private int demand;
     
     private int perUnitProfit;
-
+    private int quantity;
     
     public BestExchange() {
         super();
     }
     
-    public BestExchange(Station fromStation, Station toStation, Commodity buyCommodity, Commodity sellCommodity) {
+    public BestExchange(Station fromStation, Station toStation, Commodity buyCommodity, Commodity sellCommodity, int quantity) {
         super();
         setBuySystemName(fromStation.getSystem());
         setBuyStationName(fromStation.getName());
@@ -32,6 +35,29 @@ public class BestExchange {
         setSellPrice(sellCommodity.getSellPrice());
         setDemand(sellCommodity.getDemand());
         setPerUnitProfit(sellCommodity.getSellPrice() - buyCommodity.getBuyPrice());
+        setQuantity(quantity);
+    }
+    
+    public Map<String, Object> toMap(Integer index) {
+        
+        Map<String, Object> out = new HashMap<>();
+        if (index != null) {
+            out.put("#", index);
+        }
+        
+        out.put("FROM SYSTEM", buySystemName);
+        out.put("FROM STATION", buyStationName);
+        out.put("COMMODITY", commodity);
+        out.put("BUY @", buyPrice);
+        out.put("SUPPLY", supply);
+        out.put("CARGO COST", buyPrice * quantity);
+         out.put("TO SYSTEM", sellSystemName);
+        out.put("TO STATION", sellStationName);
+        out.put("SELL @", sellPrice);
+        out.put("DEMAND", demand);
+        out.put("UNIT PROFIT", perUnitProfit);
+        out.put("PROFIT", perUnitProfit * quantity);
+        return out;
     }
     
     /* (non-Javadoc)
@@ -184,6 +210,20 @@ public class BestExchange {
      */
     public void setPerUnitProfit(int perUnitProfit) {
         this.perUnitProfit = perUnitProfit;
+    }
+
+    /**
+     * @return the quantity
+     */
+    public int getQuantity() {
+        return quantity;
+    }
+
+    /**
+     * @param quantity the quantity to set
+     */
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
     
 }

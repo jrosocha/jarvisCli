@@ -33,9 +33,12 @@ import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientEdge;
+import com.tinkerpop.blueprints.impls.orient.OrientElement;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
@@ -100,15 +103,22 @@ public class StarSystemService {
         return systemsWithinOneJumpOfDistance;
     }
     
-    
-    
-    public Set<Vertex> findSystemsWithinNFrameshiftJumpsOfDistance(Vertex system, float jumpDistance, int jumps) {
+    public Set<Vertex> findSystemsWithinNFrameshiftJumpsOfDistance(OrientGraph graph, Vertex system, float jumpDistance, int jumps) {
         
         //"traverse in_Frameshift, out_Frameshift, Frameshift.in, Frameshift.out from #11:4 while $depth <= 4"
         // select from (traverse in_Frameshift, out_Frameshift, Frameshift.in, Frameshift.out from #11:4 while $depth <= 4 and (@class = 'System' or (@class = 'Frameshift' and ly < 10.0))) where @class = 'System'
         Set<Vertex> systemsWithinNJumpOfDistance = new HashSet<>();
-        OrientVertex o = (OrientVertex) system;
-        o.traverse().fields("in_Frameshift", "out_Frameshift", "Frameshift.in", "Frameshift.out")
+        OrientVertex o = (OrientVertex) system;    
+        
+        for (OIdentifiable id :o.traverse()
+        .fields("in_Frameshift", "out_Frameshift", "Frameshift.in", "Frameshift.out")
+        .predicate(new OSQLPredicate("$depth <= " + jumps * 2 + " and (@class = 'System' or (@class = 'Frameshift' and ly < " + jumpDistance + "))"))) {
+            
+            OrientElement element = graph.getElement(id);
+            if (element.getRecord().getClassName().equals("System")) {
+                systemsWithinNJumpOfDistance.add((Vertex) element);
+            }
+        }
                 
         return systemsWithinNJumpOfDistance;
     }

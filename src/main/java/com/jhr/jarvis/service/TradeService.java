@@ -80,10 +80,10 @@ public class TradeService {
             originSystem = hasEdge.getVertex(Direction.OUT);
             fromStation.setSystem(originSystem.getProperty("name"));
         }
+
+        Set<Vertex> systemsWithinNShipJumps = starSystemService.findSystemsWithinNFrameshiftJumpsOfDistance(graph, originSystem, ship.getJumpDistance(), maxJumps);
         
-        Set<Vertex> systemsWithinOneShipJump = starSystemService.findSystemsWithinOneFrameshiftJumpOfDistance(originSystem, ship.getJumpDistance());
-        
-        for (Vertex destinationSystem: systemsWithinOneShipJump) {
+        for (Vertex destinationSystem: systemsWithinNShipJumps) {
             
             String destinationSystemName = destinationSystem.getProperty("name");
             Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
@@ -96,7 +96,7 @@ public class TradeService {
                     
                     Commodity buyCommodity = buyCommodities.get(commodity);
                     Commodity sellCommodity = sellCommodities.get(commodity);
-                    BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity);
+                    BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity, ship.getCargoSpace());
                     // add the exchange to the master list.
                     bestExchangeList.add(bestExchange);   
                 }
@@ -106,10 +106,32 @@ public class TradeService {
         List<BestExchange> sortedBestExchangeList =  bestExchangeList.parallelStream().sorted((a,b)->{ return Integer.compare(a.getPerUnitProfit(), b.getPerUnitProfit()); }).collect(Collectors.toList());
         sortedBestExchangeList = Lists.reverse(sortedBestExchangeList);
         
-        System.out.println("Finished in '" + (new Date().getTime() - start.getTime()) + " ms");
-        System.out.println("Exchanges found: " + sortedBestExchangeList.size());
+        List<Map<String, Object>> tableData = new ArrayList<>();
+        int limit = sortedBestExchangeList.size() >= 10 ? 10 : sortedBestExchangeList.size();
+        int index = 0;
+        for (BestExchange exchange : sortedBestExchangeList.subList(0, limit)) {
+            index++;
+            Map<String, Object> mappedExchange = exchange.toMap(index);
+            tableData.add(mappedExchange);
+            SavedExchange e = new SavedExchange(new Station(exchange.getBuyStationName(), exchange.getBuySystemName()), 
+                    new Station(exchange.getSellStationName(), exchange.getSellSystemName()));
+            lastSearchedExchanges.put(index, e);
+        }
         
-        return sortedBestExchangeList.toString();        
+        if (tableData.size() == 0) {
+            return "No exchange available in provided range";
+        }
+        
+        List<String> columns = ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "UNIT PROFIT", "PROFIT");
+        out += OsUtils.LINE_SEPARATOR;
+        out += "From System: " + tableData.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + tableData.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += tableData.size() + " Best trading solution within " + maxJumps + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR;
+        out += TableRenderer.renderMapDataAsTable(tableData, columns);
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
     }
     
     
