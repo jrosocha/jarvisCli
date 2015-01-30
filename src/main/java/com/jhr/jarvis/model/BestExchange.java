@@ -1,7 +1,9 @@
 package com.jhr.jarvis.model;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class BestExchange {
 
@@ -18,6 +20,10 @@ public class BestExchange {
     
     private int perUnitProfit;
     private int quantity;
+    
+    private List<BestExchange> nextTrip = new CopyOnWriteArrayList<BestExchange>();
+    private int routePerProfitUnit = 0;
+    private BestExchange parent = null;
     
     public BestExchange() {
         super();
@@ -57,6 +63,9 @@ public class BestExchange {
         out.put("DEMAND", demand);
         out.put("UNIT PROFIT", perUnitProfit);
         out.put("PROFIT", perUnitProfit * quantity);
+        out.put("ROUTE UNIT PROFIT", routePerProfitUnit);
+        out.put("ROUTE PROFIT", routePerProfitUnit * quantity);
+        
         return out;
     }
     
@@ -224,6 +233,48 @@ public class BestExchange {
      */
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    /**
+     * @return the nextTrip
+     */
+    public List<BestExchange> getNextTrip() {
+        return nextTrip;
+    }
+
+    /**
+     * @param nextTrip the nextTrip to set
+     */
+    public void setNextTrip(List<BestExchange> nextTrip) {
+        this.nextTrip = nextTrip;
+    }
+
+    /**
+     * @return the routePerProfitUnit
+     */
+    public int getRoutePerProfitUnit() {
+        return routePerProfitUnit;
+    }
+
+    /**
+     * @param routePerProfitUnit the routePerProfitUnit to set
+     */
+    public void setRoutePerProfitUnit(int routePerProfitUnit) {
+        this.routePerProfitUnit = routePerProfitUnit;
+    }
+
+    /**
+     * @return the parent
+     */
+    public BestExchange getParent() {
+        return parent;
+    }
+
+    /**
+     * @param parent the parent to set
+     */
+    public void setParent(BestExchange parent) {
+        this.parent = parent;
     }
     
 }

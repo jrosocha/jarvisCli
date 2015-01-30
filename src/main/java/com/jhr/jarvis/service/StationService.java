@@ -20,6 +20,7 @@ import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
+import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
@@ -172,7 +173,45 @@ public class StationService {
         return foundStation;
     }
 
+    public Vertex getSystemVertexForStationVertex(Vertex stationVertex) {
+        Vertex originSystem= null;
+        for (Edge hasEdge: stationVertex.getEdges(Direction.IN, "Has")) {
+            originSystem = hasEdge.getVertex(Direction.OUT);
+            return originSystem;
+        }
+        return null;
+    }
 
+    public List<Station> findStationsOrientDb(String partial) {
+        
+        List<Station> out = new ArrayList<>();
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            
+            for (Vertex stationVertex : (Iterable<Vertex>) graph.command(
+                    new OCommandSQL("select from Station where name like '" + partial.toUpperCase() + "%'")).execute()) {
+                
+                Vertex systemVertex = getSystemVertexForStationVertex(stationVertex);
+                Station station = new Station(stationVertex.getProperty("name"), systemVertex.getProperty("name"));
+                out.add(station);
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+        
+        if (out.size() == 1) {
+            setUserLastStoredStation(out.get(0));
+        }
+        
+        return out;
+    }
+    
     public List<Station> findStations(String partial) {
         
         String query = "MATCH (system:System)-[:HAS]->(station:Station)"

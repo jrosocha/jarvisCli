@@ -2,6 +2,7 @@ package com.jhr.jarvis.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -56,82 +57,93 @@ public class TradeService {
     private Map<Integer, SavedExchange> lastSearchedExchanges = new HashMap<>(); 
 
     
-    public String tradeOrientDb(String fromStationName, Ship ship, int maxJumps) {
+    public List<BestExchange> pathToExchange(List<BestExchange> data, int index) {
+
+        List<BestExchange> pathToExchange = new ArrayList<>();
+        BestExchange currentExchange = data.get(index);
         
-        Date start = new Date();
+        while (currentExchange != null) {
+            pathToExchange.add(currentExchange);
+            currentExchange = currentExchange.getParent();
+        }
         
-        String out = "WIP";
+        Collections.reverse(pathToExchange);
+        return pathToExchange;
+          
+    }
+    
+    public List<BestExchange> tradeNOrientDb(String fromStationName, Ship ship, int maxJumps, int tradeStops, List<BestExchange> endList) {
+        
+        tradeStops--;
+        
+        List<BestExchange> trades = tradeOrientDb(fromStationName, ship, maxJumps);
+        
+        if (tradeStops > 0) {        
+            for (BestExchange trade: trades) {
+                List<BestExchange> thisTrip = tradeNOrientDb(trade.getSellStationName(), ship, maxJumps, tradeStops, endList);
+                thisTrip.parallelStream().forEach(exchange->{ exchange.setParent(trade); exchange.setRoutePerProfitUnit( exchange.getPerUnitProfit() + trade.getPerUnitProfit()); });
+                trade.setNextTrip(thisTrip);
+            }
+        } else {
+            endList.addAll(trades);
+        }
+        
+        return trades;
+    }
+
+    
+    public List<BestExchange> tradeOrientDb(String fromStationName, Ship ship, int maxJumps) {
         Station fromStation = new Station();
-        OrientGraph graph = orientDbService.getFactory().getTx();
-        
+        OrientGraph graph = null;
         List<BestExchange> bestExchangeList = new ArrayList<>();
         
-        
-        //starting station
-        OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", fromStationName);
-        fromStation.setName(vertexStation.getProperty("name"));
-        
-        // populate worthwile buy commodities
-        Map<String, Commodity> buyCommodities = stationService.getStationBuyCommodities(vertexStation, ship);
-        
-        // get a system for a station.
-        Vertex originSystem= null;
-        for (Edge hasEdge: vertexStation.getEdges(Direction.IN, "Has")) {
-            originSystem = hasEdge.getVertex(Direction.OUT);
+        try {
+            graph = orientDbService.getFactory().getTx();
+            
+            //starting station
+            OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", fromStationName);
+            fromStation.setName(vertexStation.getProperty("name"));
+            
+            // populate worthwile buy commodities
+            Map<String, Commodity> buyCommodities = stationService.getStationBuyCommodities(vertexStation, ship);
+            
+            // get a system for a station.
+            Vertex originSystem = stationService.getSystemVertexForStationVertex(vertexStation);
             fromStation.setSystem(originSystem.getProperty("name"));
-        }
-
-        Set<Vertex> systemsWithinNShipJumps = starSystemService.findSystemsWithinNFrameshiftJumpsOfDistance(graph, originSystem, ship.getJumpDistance(), maxJumps);
-        
-        for (Vertex destinationSystem: systemsWithinNShipJumps) {
+    
+            Set<Vertex> systemsWithinNShipJumps = starSystemService.findSystemsWithinNFrameshiftJumpsOfDistance(graph, originSystem, ship.getJumpDistance(), maxJumps);
             
-            String destinationSystemName = destinationSystem.getProperty("name");
-            Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
-            
-            for (Vertex station: systemStations) {
-                Station toStation = new Station(station.getProperty("name"), destinationSystemName);
-                Map<String, Commodity> sellCommodities = stationService.getReleventStationSellCommodities(station, buyCommodities, ship);
+            for (Vertex destinationSystem: systemsWithinNShipJumps) {
                 
-                for (String commodity: sellCommodities.keySet()) {
+                String destinationSystemName = destinationSystem.getProperty("name");
+                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+                
+                for (Vertex station: systemStations) {
+                    Station toStation = new Station(station.getProperty("name"), destinationSystemName);
+                    Map<String, Commodity> sellCommodities = stationService.getReleventStationSellCommodities(station, buyCommodities, ship);
                     
-                    Commodity buyCommodity = buyCommodities.get(commodity);
-                    Commodity sellCommodity = sellCommodities.get(commodity);
-                    BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity, ship.getCargoSpace());
-                    // add the exchange to the master list.
-                    bestExchangeList.add(bestExchange);   
+                    for (String commodity: sellCommodities.keySet()) {
+                        
+                        Commodity buyCommodity = buyCommodities.get(commodity);
+                        Commodity sellCommodity = sellCommodities.get(commodity);
+                        BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity, ship.getCargoSpace());
+                        bestExchange.setParent(null);
+                        bestExchange.setRoutePerProfitUnit(bestExchange.getPerUnitProfit());
+                        // add the exchange to the master list.
+                        bestExchangeList.add(bestExchange);
+                    }
                 }
             }
+            
+            graph.commit();
+        
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         
         List<BestExchange> sortedBestExchangeList =  bestExchangeList.parallelStream().sorted((a,b)->{ return Integer.compare(a.getPerUnitProfit(), b.getPerUnitProfit()); }).collect(Collectors.toList());
         sortedBestExchangeList = Lists.reverse(sortedBestExchangeList);
-        
-        List<Map<String, Object>> tableData = new ArrayList<>();
-        int limit = sortedBestExchangeList.size() >= 10 ? 10 : sortedBestExchangeList.size();
-        int index = 0;
-        for (BestExchange exchange : sortedBestExchangeList.subList(0, limit)) {
-            index++;
-            Map<String, Object> mappedExchange = exchange.toMap(index);
-            tableData.add(mappedExchange);
-            SavedExchange e = new SavedExchange(new Station(exchange.getBuyStationName(), exchange.getBuySystemName()), 
-                    new Station(exchange.getSellStationName(), exchange.getSellSystemName()));
-            lastSearchedExchanges.put(index, e);
-        }
-        
-        if (tableData.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        List<String> columns = ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "UNIT PROFIT", "PROFIT");
-        out += OsUtils.LINE_SEPARATOR;
-        out += "From System: " + tableData.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + tableData.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += tableData.size() + " Best trading solution within " + maxJumps + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR;
-        out += TableRenderer.renderMapDataAsTable(tableData, columns);
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
+        return sortedBestExchangeList;
     }
     
     
