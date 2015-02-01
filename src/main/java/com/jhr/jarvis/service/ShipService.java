@@ -15,9 +15,6 @@ import com.jhr.jarvis.model.Ship;
 
 @Service
 public class ShipService {
-
-    @Autowired
-    private GraphDbService graphDbService;
     
     @Autowired
     private Settings settings;

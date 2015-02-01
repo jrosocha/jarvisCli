@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
@@ -16,6 +15,7 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
@@ -95,7 +95,7 @@ public class TradeCommands implements CommandMarker {
         }
         
         stationService.setUserLastStoredStation(savedExchange.getTo());
-        out += starSystemService.calculateShortestPathBetweenSystems(savedExchange.getFrom().getSystem(), savedExchange.getTo().getSystem(), ship.getJumpDistance());        
+        //out += starSystemService.calculateShortestPathBetweenSystems(savedExchange.getFrom().getSystem(), savedExchange.getTo().getSystem(), ship.getJumpDistance());        
         return out;
     }
   
@@ -339,7 +339,7 @@ public class TradeCommands implements CommandMarker {
         out += "From System: " + tableData.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
         out += "From Station: " + tableData.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
         out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += tableData.size() + " Best trading solution within " + jumpDistance + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += tableData.size() + " Best trading solutions within " + jumpDistance + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
         out += OsUtils.LINE_SEPARATOR;
         out += TableRenderer.renderMapDataAsTable(tableData, columns);
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";

@@ -36,9 +36,6 @@ public class EliteOcrService {
     private Settings settings;
     
     @Autowired
-    private GraphDbService graphDbService;
-    
-    @Autowired
     private OrientDbService orientDbService;
     
     @Autowired

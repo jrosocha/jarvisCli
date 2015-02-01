@@ -1,6 +1,5 @@
 package com.jhr.jarvis.service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -10,15 +9,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.parboiled.common.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jhr.jarvis.model.BestExchange;
 import com.jhr.jarvis.model.Commodity;
@@ -27,20 +23,14 @@ import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.orient.OrientElement;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 @Service
 public class TradeService {
-
-    @Autowired
-    private GraphDbService graphDbService;
     
     @Autowired
     private Settings settings;
@@ -501,16 +491,6 @@ public class TradeService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return exchangeCount;
-    }
-    
-    public long exchangeCount() {
-        
-        long exchangeCount = 0;
-        String query = "MATCH ()-[e:EXCHANGE]->()"
-                + " RETURN COUNT(e) AS `EXCHANGE COUNT`";
-        List<Map<String, Object>> results = graphDbService.runCypherNative(query, new HashMap<>());
-        exchangeCount = (long) results.get(0).get("EXCHANGE COUNT");
         return exchangeCount;
     }
     

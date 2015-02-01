@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
-import com.jhr.jarvis.service.GraphDbService;
 import com.jhr.jarvis.service.StarSystemService;
 
 @Component
@@ -23,9 +22,6 @@ public class DevCommands implements CommandMarker {
 	
     @Autowired
     private StarSystemService starSystemService;
- 	
-    @Autowired
-    private GraphDbService graphDbService;
     
     @Autowired
     private Settings settings;
@@ -37,9 +33,7 @@ public class DevCommands implements CommandMarker {
 	public String loadSystemsToMemory(
 		@CliOption(key = { "reload" }, mandatory = false, specifiedDefaultValue="true", help = "reload Systems.csv file.") final String reload,
 	    @CliOption(key = { "get" }, mandatory = false, help = "Return data system from Systems.csv. Uses a regex.") final String get,
-	    @CliOption(key = { "query" }, mandatory = false, help = "Raw neo4j query") final String query,
-	    @CliOption(key = { "settings" }, mandatory = false, specifiedDefaultValue="true", help = "Loads/Reads the jarvis.properties file") final String properties,
-	    @CliOption(key = { "wipe" }, mandatory = false, specifiedDefaultValue="true", help = "Emptys the Neo4j graph") final String wipeDb
+	    @CliOption(key = { "settings" }, mandatory = false, specifiedDefaultValue="true", help = "Loads/Reads the jarvis.properties file") final String properties
 	    ) throws IOException {
 	    
 	    String out = "";
@@ -60,19 +54,11 @@ public class DevCommands implements CommandMarker {
                 }
             }
         }
-	    
-	    if (!StringUtils.isEmpty(query)) {
-	        out += graphDbService.runCypherWithTransaction(query);
-	    }
-	    
+
 	    if (!StringUtils.isEmpty(properties)) {
 	        settings.loadSettings();
 	        out += settings.toString() + OsUtils.LINE_SEPARATOR;
 	    }
-        
-        if (!StringUtils.isEmpty(wipeDb)) {
-            out += graphDbService.wipeDb();
-        }
 	    
 	    return out;
 	}

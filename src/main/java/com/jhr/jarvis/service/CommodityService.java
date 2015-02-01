@@ -6,22 +6,16 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.CommodityNotFoundException;
-import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Commodity;
 import com.jhr.jarvis.model.Settings;
-import com.jhr.jarvis.model.StarSystem;
-import com.jhr.jarvis.model.Station;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -29,9 +23,6 @@ import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 @Service
 public class CommodityService {
-
-    @Autowired
-    private GraphDbService graphDbService;
 
     @Autowired
     private Settings settings;
