@@ -47,7 +47,7 @@ public class StationCommands implements CommandMarker {
             return out;
         }
         
-        List<Station> stations = stationService.findStationsOrientDb(buffer);
+        List<Station> stations = stationService.findStationsOrientDb(buffer, true);
         if (stations.size() > 0) {
             out += stationService.joinStationsAsString(stations);
         } else {
@@ -83,7 +83,7 @@ public class StationCommands implements CommandMarker {
             station = stationService.getBestMatchingStationOrStoredStation(buffer);
         } catch (StationNotFoundException e) {
             String out = null;
-            out = stationService.joinStationsAsString(stationService.findStationsOrientDb(buffer));
+            out = stationService.joinStationsAsString(stationService.findStationsOrientDb(buffer, true));
             if (StringUtils.isEmpty(out)) {
                 out += drawUtils.messageBox(3, 
                     "No Stations Found Starting With '" + buffer + "'",

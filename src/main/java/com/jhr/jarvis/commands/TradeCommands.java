@@ -159,109 +159,75 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        out += tradeService.sellOrientDb(foundStation.getName(), ship, jumps, foundCommodity.getName());
+        out += tradeService.sellOrientDb(foundStation, ship, jumps, foundCommodity.getName());
         return out;
     }
     
-//    @CliCommand(value = { "buy" }, help = "usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD' \n Best resource buy price with n jumps of your jump distance.")
-//    public String buy(
-//            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
-//            @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps,
-//            @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
-//        ) {
-//        
-//        
-//        String usage1 = "Usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD'";
-//        String usage2=  "Omit --jumps and you search every station in the graph.";
-//        String usage3=  "With --jumps Best resource buy price with n jumps of your jump distance.";
-//        String usage4=  "With --jumps Depends on --start station or saved station, and your ship.";
-//        String out = "";
-//        Station foundStation;
-//        String foundCommodity;
-//
-//        try {
-//            foundCommodity = getBestMatchingCommodityOrStoredCommodity(commodity);
-//        } catch (CommodityNotFoundException e) {          
-//            out += drawUtils.messageBox(3, "Error: Commodity matching expression '" + commodity + "' not found",
-//                    usage1, usage2, usage3, usage4);
-//            return out;
-//        }
-//        
-//        if (jumps == null) {
-//            out += tradeService.bestBuy(foundCommodity);
-//            return out;
-//        }
-//        
-//        try {
-//            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
-//        } catch (StationNotFoundException e) {
-//            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
-//                    usage1, usage2, usage3, usage4);
-//            return out;
-//        }
-//      
-//        Ship ship;
-//        try {
-//            ship = shipService.loadShip();
-//        } catch (IOException e) {
-//            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
-//                    "Check your write permissions in the ../data dir.");
-//            return out;
-//        }
-//        
-//        if (shipService.isShipEmpty(ship)) {           
-//            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
-//                    "First set your ship with: ship cargo;distance;cash ");
-//            return out;
-//        }
-//        
-//        out += tradeService.buy(foundStation.getName(), ship, jumps, foundCommodity);
-//        return out;
-//    }
- 
-//    @CliCommand(value = { "gos" }, help = "usage: go --start 'Station Name' --to 'Station Name'")
-//    public String goStation(
-//            @CliOption(key = { "start" }, mandatory = false, help = "--start 'Starting Station'") final String station,
-//            @CliOption(key = { "to" }, mandatory = true, help = "--to 'Target Station'") final String toStation
-//        ) {
-//        
-//        String usage = "usage: go --start 'Station Name' --to 'Station Name'" 
-//                + OsUtils.LINE_SEPARATOR
-//                + "Best commodity exchange between 2 stations non stop." 
-//                + OsUtils.LINE_SEPARATOR
-//                + "or try a find '<partial station match>'"
-//                + OsUtils.LINE_SEPARATOR
-//                + "or try a ship cargo;distance;cash to set up your ship.";;
-//        
-//        String out = "";
-//        Station foundStation;
-//        Station foundStation2;
-//        try {
-//            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
-//            foundStation2 = stationService.findUniqueStation(toStation, false);
-//        } catch (StationNotFoundException e) {
-//            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-//            return out;
-//        }
-//        
-//        Ship ship;
-//        try {
-//            ship = shipService.loadShip();
-//        } catch (IOException e) {
-//            out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
-//            return out;
-//        }
-//
-//        if (shipService.isShipEmpty(ship)) {
-//            out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
-//            return out;
-//        }
-//        
-//        out += tradeService.stationToStation(foundStation.getName(), ship, foundStation2.getName());
-//        return out;
-//    }
-
+    /**
+     * When you are trying to sell a commodity. 
+     * 
+     * @param station
+     * @param jumps
+     * @param commodity
+     * @return
+     */
+    @CliCommand(value = { "buy" }, help = "usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD' \n Lowest resource buy price with n jumps of your jump distance.")
+    public String buy(
+            @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
+            @CliOption(key = { "jumps" }, mandatory = false, help = "Number of jumps") final Integer jumps,
+            @CliOption(key = { "commodity" }, mandatory = false, help = "Commodity name") final String commodity
+        ) {
+        
+        String usage1 = "Usage: buy --start 'Station Name' --jumps 2 --commodity 'GOLD'";
+        String usage2=  "Omit --jumps and you search every station in the graph.";
+        String usage3=  "With --jumps Lowest resource buy price with n jumps of your jump distance.";
+        String usage4=  "With --jumps Depends on --start station or saved station, and your ship.";
+        
+        String out = "";
+        Station foundStation;
+        Commodity foundCommodity;
+        
+        try {
+            foundCommodity = commodityService.findUniqueCommodityOrientDb(commodity);
+        } catch (CommodityNotFoundException e) {          
+            out += drawUtils.messageBox(3, "Error: Commodity matching expression '" + commodity + "' not found",
+                    usage1, usage2, usage3, usage4);
+            return out;
+        }
+        
+        if (jumps == null) {
+            out += tradeService.bestBuyPriceOrientDb(foundCommodity.getName());
+            return out;
+        }
+        
+        try {
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
+        } catch (StationNotFoundException e) {
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3, usage4);
+            return out;
+        }
+        
+        Ship ship;
+        try {
+            ship = shipService.loadShip();
+        } catch (IOException e) {
+            out += drawUtils.messageBox(3, "Error: There was an error loading your ship.",
+                    "Check your write permissions in the ../data dir.");
+            return out;
+        }
+        
+        if (shipService.isShipEmpty(ship)) {           
+            out += drawUtils.messageBox(3, "Error: Your ship may ot be configured",
+                    "First set your ship with: ship cargo;distance;cash ");
+            return out;
+        }
+        
+        out += tradeService.buyOrientDb(foundStation, ship, jumps, foundCommodity.getName());
+        return out;
+    }
     
+ 
     @CliCommand(value = { "trade" }, help = "...")
     public String otrade(
             @CliOption(key = { "start" }, mandatory = false, help = "Starting Station") final String station,
@@ -380,5 +346,49 @@ public class TradeCommands implements CommandMarker {
         
         return out;
     }
+    
+    
+  @CliCommand(value = { "s2s" }, help = "usage: go --start 'Station Name' --to 'Station Name'")
+  public String goStation(
+          @CliOption(key = { "start" }, mandatory = false, help = "--start 'Starting Station'") final String station,
+          @CliOption(key = { "to" }, mandatory = true, help = "--to 'Target Station'") final String toStation
+      ) {
+      
+      String usage = "usage: go --start 'Station Name' --to 'Station Name'" 
+              + OsUtils.LINE_SEPARATOR
+              + "Best commodity exchange between 2 stations non stop." 
+              + OsUtils.LINE_SEPARATOR
+              + "or try a find '<partial station match>'"
+              + OsUtils.LINE_SEPARATOR
+              + "or try a ship cargo;distance;cash to set up your ship.";;
+      
+      String out = "";
+      Station foundStation;
+      Station foundStation2;
+      try {
+          foundStation = stationService.getBestMatchingStationOrStoredStation(station);
+          foundStation2 = stationService.findUniqueStationOrientDb(toStation, false);
+      } catch (StationNotFoundException e) {
+          out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+          return out;
+      }
+      
+      Ship ship;
+      try {
+          ship = shipService.loadShip();
+      } catch (IOException e) {
+          out += e.getMessage() + OsUtils.LINE_SEPARATOR + usage;
+          return out;
+      }
+
+      if (shipService.isShipEmpty(ship)) {
+          out += "First set your ship with: ship cargo;distance;cash " + OsUtils.LINE_SEPARATOR;
+          return out;
+      }
+      
+      out += tradeService.stationToStation(foundStation, foundStation2, ship);
+      return out;
+  }
+
     
 }

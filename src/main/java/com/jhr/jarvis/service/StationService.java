@@ -54,6 +54,7 @@ public class StationService {
             if (buyPrice > 0 && supply >= ship.getCargoSpace() && (buyPrice * ship.getCargoSpace()) <= ship.getCash()) {
                 Vertex commodityVertex = exchange.getVertex(Direction.IN);
                 Commodity commodity = new Commodity(commodityVertex.getProperty("name"), buyPrice, supply, sellPrice, demand);
+                commodity.setGroup(commodityService.getCommodityGroup(commodity.getName()));
                 stationBuyCommodities.put(commodity.getName(), commodity);
             }
         }
@@ -72,6 +73,7 @@ public class StationService {
             if (demand > ship.getCargoSpace() && sellPrice > 0) {
                 Vertex commodityVertex = exchange.getVertex(Direction.IN);
                 Commodity sellCommodity = new Commodity(commodityVertex.getProperty("name"), buyPrice, supply, sellPrice, demand);
+                sellCommodity.setGroup(commodityService.getCommodityGroup(sellCommodity.getName()));
                 Commodity boughtCommodity = buyCommodities.get(sellCommodity.getName());
                 
                 if (boughtCommodity != null && boughtCommodity.getBuyPrice() < sellCommodity.getSellPrice()) {
@@ -151,7 +153,7 @@ public class StationService {
         }
      
         if (!found) {
-            List<Station> stations = findStationsOrientDb(partial);
+            List<Station> stations = findStationsOrientDb(partial, loadIntoMemory);
             
             if (stations.size() == 0 || stations.size() > 1 ) {
                 throw new StationNotFoundException("Unique station could not be identified for '" + partial + "'.");
@@ -232,7 +234,7 @@ public class StationService {
         return null;
     }
 
-    public List<Station> findStationsOrientDb(String partial) {
+    public List<Station> findStationsOrientDb(String partial, boolean loadToMemory) {
         
         List<Station> out = new ArrayList<>();
         
@@ -255,7 +257,7 @@ public class StationService {
             }
         }
         
-        if (out.size() == 1) {
+        if (out.size() == 1 && loadToMemory) {
             setUserLastStoredStation(out.get(0));
         }
         
