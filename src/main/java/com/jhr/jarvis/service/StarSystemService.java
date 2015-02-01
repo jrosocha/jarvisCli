@@ -33,7 +33,9 @@ import com.google.common.collect.ImmutableMap;
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.StarSystem;
+import com.jhr.jarvis.model.Station;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
@@ -325,6 +327,42 @@ public class StarSystemService {
             return null;
         }
     }
+
+    /**
+     * Runs an exact match and a partial match looking to identify a single system.
+     * If a single system is found, it is loaded into memory
+     * 
+     * @param partial
+     * @return
+     * @throws Exception
+     */
+    public StarSystem findUniqueSystemOrientDb(String partial) throws SystemNotFoundException {
+        
+        StarSystem foundSystem = null;
+        boolean found = false;
+        
+        try {
+            foundSystem = findExactSystemOrientDb(partial);
+            found = true;
+        } catch (Exception e) {
+            // not an exact match. proceed
+        }
+     
+        if (!found) {
+            
+            List<StarSystem> systems = findSystemsOrientDb(partial);
+                    
+            if (systems.size() == 0 || systems.size() > 1 ) {
+                throw new SystemNotFoundException("Unique station could not be identified for '" + partial + "'.");
+            }
+            
+            foundSystem = systems.get(0);
+        }
+
+        return foundSystem;
+    }
+ 
+    
     
     /**
      * Runs an exact match and a partial match looking to identify a single system.
@@ -371,6 +409,45 @@ public class StarSystemService {
      * @return
      * @throws Exception 
      */
+    public StarSystem findExactSystemOrientDb(String systemName) throws SystemNotFoundException {
+        
+        if (systemName == null) {
+            throw new SystemNotFoundException("Exact system '" + systemName + "' could not be identified");
+        }
+        
+        StarSystem foundSystem = null;
+       
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexSystem = (OrientVertex) graph.getVertexByKey("System.name", systemName);
+            if (vertexSystem != null) {
+                foundSystem = new StarSystem(vertexSystem.getProperty("name"));
+                foundSystem.setX(vertexSystem.getProperty("x"));
+                foundSystem.setY(vertexSystem.getProperty("y"));
+                foundSystem.setZ(vertexSystem.getProperty("z"));                
+            }
+            graph.commit();
+        } catch (Exception e) {
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+        
+        if (foundSystem == null) {
+            throw new SystemNotFoundException("Exact system '" + systemName + "' could not be identified");
+        }
+        
+        return foundSystem;
+    }
+    
+    /**
+     * Matches if the system exists as typed
+     * 
+     * @param systemName
+     * @return
+     * @throws Exception 
+     */
     public StarSystem findExactSystem(String systemName) throws SystemNotFoundException {
         String query = "MATCH (system:System)"
                 + " WHERE system.name={systemName}"
@@ -391,6 +468,41 @@ public class StarSystemService {
         foundSystem = new StarSystem((String) results.get(0).get("system.name"));
         return foundSystem;
     }
+    
+    /**
+    * Matches a system starting with @param partial 
+    * If more than one system is found, returns \n separated string.
+    * If none is found, returns a message to that effect.
+    * 
+    * @param partial
+    * @return
+    */
+   public List<StarSystem> findSystemsOrientDb(String partial) {
+       
+       List<StarSystem> out = new ArrayList<>();
+       
+       OrientGraph graph = null;
+       try {
+           graph = orientDbService.getFactory().getTx();
+           
+           for (Vertex systemVertex : (Iterable<Vertex>) graph.command(
+                   new OCommandSQL("select from System where name like '" + partial.toUpperCase() + "%'")).execute()) {
+               StarSystem foundSystem = new StarSystem(systemVertex.getProperty("name"));
+               foundSystem.setX((float)systemVertex.getProperty("x"));
+               foundSystem.setY((float)systemVertex.getProperty("y"));
+               foundSystem.setZ((float)systemVertex.getProperty("z"));     
+               out.add(foundSystem);
+           }
+           
+       } catch (Exception e) {
+           e.printStackTrace();
+           if (graph != null) {
+               graph.rollback();
+           }
+       }
+       
+       return out;
+   }
 
      /**
      * Matches a system starting with @param partial 

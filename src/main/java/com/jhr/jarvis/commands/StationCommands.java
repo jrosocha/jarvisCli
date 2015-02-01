@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.CommandMarker;
 import org.springframework.shell.core.annotation.CliCommand;
 import org.springframework.shell.core.annotation.CliOption;
-import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -27,9 +26,9 @@ public class StationCommands implements CommandMarker {
     
     @Autowired
     private ObjectMapper objectMapper;
-    
+
     @CliCommand(value = { "find" }, help = "usage: find Goo \n Find the station starting with the crap you typed.")
-    public String find(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
+    public String findOrientDb(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
         String usage1 = "Usage:       find <parial station name>";
         String usage2 = "Description: Finds a station or stations starting with the input expression.";
@@ -48,7 +47,7 @@ public class StationCommands implements CommandMarker {
             return out;
         }
         
-        List<Station> stations = stationService.findStations(buffer);
+        List<Station> stations = stationService.findStationsOrientDb(buffer);
         if (stations.size() > 0) {
             out += stationService.joinStationsAsString(stations);
         } else {
@@ -63,7 +62,7 @@ public class StationCommands implements CommandMarker {
     }
     
     @CliCommand(value = { "station" }, help = "usage: station Goo \n Find the station starting with the crap you typed.")
-    public String stationDetails(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
+    public String stationDetailsOrientDb(@CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "Command name to provide help for") String buffer) {
         
         String usage1 = "Usage:       station <parial station name>";
         String usage2 = "Description: Finds a station starting with the input expression.";
@@ -84,7 +83,7 @@ public class StationCommands implements CommandMarker {
             station = stationService.getBestMatchingStationOrStoredStation(buffer);
         } catch (StationNotFoundException e) {
             String out = null;
-            out = stationService.joinStationsAsString(stationService.findStations(buffer));
+            out = stationService.joinStationsAsString(stationService.findStationsOrientDb(buffer));
             if (StringUtils.isEmpty(out)) {
                 out += drawUtils.messageBox(3, 
                     "No Stations Found Starting With '" + buffer + "'",
@@ -96,7 +95,7 @@ public class StationCommands implements CommandMarker {
             return out;
         }
         
-        return stationService.stationDetails(station);
+        return stationService.stationDetailsOrientDb(station);
 
     }
 }

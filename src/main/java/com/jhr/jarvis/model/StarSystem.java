@@ -96,7 +96,7 @@ public class StarSystem {
     public float getZ() {
         return z;
     }
-    public void setZ(int z) {
+    public void setZ(float z) {
         this.z = z;
     }
     

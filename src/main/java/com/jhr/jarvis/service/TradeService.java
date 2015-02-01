@@ -27,9 +27,12 @@ import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.table.TableRenderer;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientElement;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
@@ -146,121 +149,7 @@ public class TradeService {
         return sortedBestExchangeList;
     }
     
-    
-    public String trade(String fromStation, Ship s, int hops) {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity:Commodity)<-[buy:EXCHANGE]-(fromStation:Station)<-[:HAS]-(fromSystem:System)-[shift:FRAMESHIFT*1.."+ hops +"]-(toSystem:System)-[:HAS]->(toStation:Station)-[sell:EXCHANGE]->(commodity:Commodity)" 
-            + " WHERE fromStation.name={fromStation}"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.supply >= {cargo}"
-            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.sellPrice > buy.buyPrice"
-            + " AND sell.demand >= {cargo}"
-            + " AND ALL(x IN shift WHERE x.ly <= {distance})"
-            + " RETURN DISTINCT" 
-            + " fromSystem.name as `FROM SYSTEM`," 
-            + " fromStation.name as `FROM STATION`," 
-            + " toStation.name as `TO STATION`," 
-            + " toSystem.name as `TO SYSTEM`," 
-            + " commodity.name as `COMMODITY`," 
-            + " buy.buyPrice AS `BUY @`,"
-            + " sell.sellPrice AS `SELL @`,"
-            + " (buy.buyPrice * {cargo}) as `CARGO COST`,"
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as `PROFIT`"
-            + " ORDER BY `PROFIT` DESC"
-            + " LIMIT 5 ";   
-        
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);             
-        
-        if (results.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        List<Map<String, Object>> modifiedResultList = includeSavedExchangeIndexWithQueryResults(results); 
-        
-        List<String> columns = ImmutableList.of("#", "TO SYSTEM", "TO STATION", "COMMODITY", "BUY @", "CARGO COST", "SELL @", "PROFIT");
-               
-        String out = OsUtils.LINE_SEPARATOR;
-        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += results.size() + " Best trading solution within " + hops + " jump(s) @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR;
-        out += TableRenderer.renderMapDataAsTable(modifiedResultList, columns);
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
-    }
-    
-    
-    /**
-     * provides a 2 stop trade solution for systems that are 1..n jumps apart
-     * 
-     * @throws JsonParseException
-     * @throws JsonMappingException
-     * @throws IOException
-     */
-    public String trade2(String fromStation, Ship s, int jumps) {
-        Date start = new Date();
-        Map<String, Object> cypherParams = ImmutableMap.of("fromStation", fromStation, "distance", s.getJumpDistance(), "cargo", s.getCargoSpace(), "cash",s.getCash());
-        String query = "MATCH (commodity)-[buy:EXCHANGE]-(fSta:Station)-[:HAS]-(fSys:System)-[shift:FRAMESHIFT*1.."+ jumps +"]-(tSys:System)-[:HAS]-(tSta:Station)-[sell:EXCHANGE]-(commodity)"
-            + " WHERE fSta.name={fromStation}"
-            + " AND buy.buyPrice > 0"
-            + " AND buy.supply > {cargo}"
-            + " AND {cash} - (buy.buyPrice * {cargo}) > 0"
-            + " AND sell.sellPrice > 0"
-            + " AND sell.sellPrice > buy.buyPrice"
-            + " AND sell.demand >= {cargo}"
-            + " AND ALL(x IN shift WHERE x.ly <= {distance})"
-            + " WITH fSys as fromSystem,"
-            + " fSta as fromStation," 
-            + " tSta as toStation," 
-            + " tSys as toSystem," 
-            + " commodity as hop1Commodity," 
-            + " (sell.sellPrice * {cargo}) - (buy.buyPrice * {cargo}) as profit1"
-            + " ORDER BY profit1 DESC"
-            + " LIMIT 10"
-            + " MATCH (commodity2)-[buy2:EXCHANGE]-(toStation)-[:HAS]-(toSystem)-[shift2:FRAMESHIFT*1.."+ jumps +"]-(tSys2:System)-[:HAS]-(tSta2:Station)-[sell2:EXCHANGE]-(commodity2)"
-            + " WHERE buy2.buyPrice > 0"
-            + " AND {cash} - (buy2.buyPrice * {cargo}) > 0"
-            + " and buy2.supply > {cargo}"
-            + " and sell2.sellPrice > 0"
-            + " and sell2.sellPrice > buy2.buyPrice"
-            + " AND sell2.demand >= {cargo}"
-            + " AND ALL(x IN shift2 WHERE x.ly <= {distance})"
-            + " RETURN DISTINCT"
-            + " fromSystem.name AS `FROM SYSTEM`,"
-            + " fromStation.name AS `FROM STATION`,"
-            + " hop1Commodity.name as `COMMODITY 1`,"
-            + " profit1 as `PROFIT 1`,"
-            + " toSystem.name as `SYSTEM 1`," 
-            + " toStation.name as `STATION 1`,"
-            + " commodity2.name as `COMMODITY 2`," 
-            + " (sell2.sellPrice * {cargo}) - (buy2.buyPrice * {cargo}) as `PROFIT 2`," 
-            + " tSys2.name as `SYSTEM 2`," 
-            + " tSta2.name as `STATION 2`," 
-            + " profit1 + ((sell2.sellPrice * {cargo}) - (buy2.buyPrice * {cargo})) as `TRIP PROFIT`"
-            + " ORDER BY `TRIP PROFIT` DESC"
-            + " LIMIT 5";
-        
-        List<Map<String, Object>> results =  graphDbService.runCypherNative(query, cypherParams);     
-        
-        if (results.size() == 0) {
-            return "No exchange available in provided range";
-        }
-        
-        String out = OsUtils.LINE_SEPARATOR;
-        out += "From System: " + results.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
-        out += "From Station: " + results.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
-        out += "Cargo Capacity: " + s.getCargoSpace() + OsUtils.LINE_SEPARATOR;
-        out += results.size() + " Best 2 station trading solutions within " + jumps + " jump of each other @ " + s.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
-                ImmutableList.of("COMMODITY 1", "PROFIT 1", "SYSTEM 1", "STATION 1", "COMMODITY 2", "PROFIT 2", "SYSTEM 2", "STATION 2", "TRIP PROFIT"));
-        
-        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
-        return out;
-    }
+
 
     
     /**
@@ -322,6 +211,79 @@ public class TradeService {
         return out;
     }
     
+    
+    
+    public String sellOrientDb(String fromStationName, Ship ship, int maxJumps, String commodity) {
+        Date start = new Date();
+        List<Map<String, Object>> tableData = new ArrayList<>();
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            
+            Vertex stationVertex = graph.getVertexByKey("Station.name", fromStationName);
+            Vertex systemVertex = stationService.getSystemVertexForStationVertex(stationVertex);
+            
+            Set<Vertex> systemsWithinNShipJumps = starSystemService.findSystemsWithinNFrameshiftJumpsOfDistance(graph, systemVertex, ship.getJumpDistance(), maxJumps);
+            for (Vertex destinationSystem: systemsWithinNShipJumps) {
+                String destinationSystemName = destinationSystem.getProperty("name");
+                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+                for (Vertex station: systemStations) {
+                    Station toStation = new Station(station.getProperty("name"), destinationSystemName);
+                    
+                    for (Edge exchange: station.getEdges(Direction.OUT, "Exchange")) {            
+
+                        int sellPrice = exchange.getProperty("sellPrice");
+                        int buyPrice = exchange.getProperty("buyPrice");
+                        int supply = exchange.getProperty("supply");
+                        int demand = exchange.getProperty("demand");
+                        long date = exchange.getProperty("date");
+                        
+                        if (demand > ship.getCargoSpace() && sellPrice > 0) {
+                            Vertex commodityVertex = exchange.getVertex(Direction.IN);
+                            if (commodityVertex.getProperty("name").equals(commodity)) {
+                                Commodity sellCommodity = new Commodity(commodityVertex.getProperty("name"), buyPrice, supply, sellPrice, demand);
+                                Map<String, Object> row = new HashMap<>();
+                                row.put("TO SYSTEM", destinationSystem.getProperty("name"));
+                                row.put("TO STATION", station.getProperty("name"));
+                                row.put("UNIT PRICE", sellPrice);
+                                row.put("DEMAND", demand);
+                                row.put("DAYS OLD", (((new Date().getTime() - date)/1000/60/60/24) * 100)/100);
+                            }
+                        }
+                    }
+                    
+                }
+            }           
+            graph.commit();
+        } catch(Exception e) {
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+            
+        if (tableData.size() == 0) {
+            return "No sale available in provided range";
+        }
+        
+        tableData = tableData.parallelStream().sorted((row1,row2)->{
+            int p1 = (int) row1.get("UNIT PRICE");
+            int p2 = (int) row2.get("UNIT PRICE");
+            return Integer.compare(p1, p2);
+        }).collect(Collectors.toList());
+        Collections.reverse(tableData);
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += "From System: " + tableData.get(0).get("FROM SYSTEM") + OsUtils.LINE_SEPARATOR;
+        out += "From Station: " + tableData.get(0).get("FROM STATION") + OsUtils.LINE_SEPARATOR;
+        out += "Cargo Capacity: " + ship.getCargoSpace() + OsUtils.LINE_SEPARATOR;
+        out += tableData.size() + " Best stations to sell " + tableData.get(0).get("COMMODITY") + " within " + maxJumps + " jump(s) @ " + ship.getJumpDistance() + " ly or less." + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE"));
+        
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
+    }
+    
     /**
      * Sell a commodity with n jumps of this station, including this station
      * 
@@ -377,6 +339,59 @@ public class TradeService {
         out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(results, 
                 ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE"));
         
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        return out;
+    }
+    
+    public String bestSellPriceOrientDb(String commodityName) {
+        Date start = new Date();
+        
+        List<Map<String, Object>> tableData = new ArrayList<>();
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            //starting commodity
+            OrientVertex commodityVertex = (OrientVertex) graph.getVertexByKey("Commodity.name", commodityName);
+            
+            for (Edge hasExchange: commodityVertex.getEdges(Direction.IN, "Exchange")) {
+                
+                int demand = hasExchange.getProperty("demand");
+                int sellPrice = hasExchange.getProperty("sellPrice");
+                long date = hasExchange.getProperty("date");
+                if (demand > 0 && sellPrice > 0) {
+                    Vertex stationVertex = hasExchange.getVertex(Direction.OUT);
+                    Vertex systemVertex = stationService.getSystemVertexForStationVertex(stationVertex);
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("TO SYSTEM", systemVertex.getProperty("name"));
+                    row.put("TO STATION", stationVertex.getProperty("name"));
+                    row.put("UNIT PRICE", sellPrice);
+                    row.put("DEMAND", demand);
+                    row.put("DAYS OLD", (((new Date().getTime() - date)/1000/60/60/24) * 100)/100);
+                    tableData.add(row);
+                }
+            }
+            graph.commit();
+        } catch (Exception e) {
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+        
+        if (tableData.size() == 0) {
+            return "No sale available in data";
+        }
+        
+        tableData = tableData.parallelStream().sorted((row1,row2)->{
+            int p1 = (int) row1.get("UNIT PRICE");
+            int p2 = (int) row2.get("UNIT PRICE");
+            return Integer.compare(p1, p2);
+        }).collect(Collectors.toList());
+        
+        String out = OsUtils.LINE_SEPARATOR;
+        out += tableData.size() + " Best stations to sell " + commodityName + OsUtils.LINE_SEPARATOR;
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, 
+                ImmutableList.of("TO SYSTEM", "TO STATION", "UNIT PRICE", "DEMAND", "DAYS OLD"));
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
     }

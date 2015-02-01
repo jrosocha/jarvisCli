@@ -50,17 +50,10 @@ public class JarvisBannerProvider extends DefaultBannerProvider  {
 		buf.append("*                                     *"+ OsUtils.LINE_SEPARATOR);
 		buf.append("=======================================" + OsUtils.LINE_SEPARATOR);
 		buf.append("Version:          " + getVersion() + OsUtils.LINE_SEPARATOR);
-		buf.append("Systems:          " + starSystemService.systemCount() + OsUtils.LINE_SEPARATOR);
-		buf.append("Frameshift Edges: " + starSystemService.shiftCount() + OsUtils.LINE_SEPARATOR);
-		buf.append("Stations:         " + stationService.stationCount() + OsUtils.LINE_SEPARATOR);
-        
 		buf.append("Systems:          " + starSystemService.systemCountOrientDb() + OsUtils.LINE_SEPARATOR);
         buf.append("Frameshift Edges: " + starSystemService.shiftCountOrientDb() + OsUtils.LINE_SEPARATOR);
 		buf.append("Stations:         " + stationService.stationCountOrientDb() + OsUtils.LINE_SEPARATOR);
-        
-		
-		buf.append("Exchanges:        " + tradeService.exchangeCount() + OsUtils.LINE_SEPARATOR);
-		buf.append("Exchanges:        " + tradeService.exchangeCountOrientDb() + OsUtils.LINE_SEPARATOR);
+        buf.append("Exchanges:        " + tradeService.exchangeCountOrientDb() + OsUtils.LINE_SEPARATOR);
         
 		
 		return buf.toString();

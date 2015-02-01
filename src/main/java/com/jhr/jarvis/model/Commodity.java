@@ -1,5 +1,9 @@
 package com.jhr.jarvis.model;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 public class Commodity {
 
     private String name;
@@ -9,6 +13,7 @@ public class Commodity {
     private int supply;
     private int sellPrice;
     private int demand;
+    private long date;
     
     public Commodity(String name) {
         super();
@@ -30,12 +35,36 @@ public class Commodity {
         this.demand = demand;
     }
     
+    public Commodity(String name, int buyPrice, int supply, int sellPrice, int demand, long date) {
+        super();
+        this.name = name;
+        this.buyPrice = buyPrice;
+        this.supply = supply;
+        this.sellPrice = sellPrice;
+        this.demand = demand;
+        this.date = date;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
-        return "Commodity [name=" + name + ", group=" + group + "]";
+        return "Commodity [name=" + name + ", group=" + group + ", buyPrice=" + buyPrice + ", supply=" + supply + ", sellPrice=" + sellPrice + ", demand=" + demand + ", date=" + date + "]";
+    }
+    
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        
+        map.put("COMMODITY", name);
+        map.put("GROUP", group);
+        map.put("BUY @", buyPrice);
+        map.put("SUPPLY", supply);
+        map.put("SELL @", sellPrice);
+        map.put("DEMAND", demand);
+        map.put("DAYS OLD", (((new Date().getTime() - date)/1000/60/60/24) * 100) / 100);
+        
+        return map;
     }
     
     /* (non-Javadoc)

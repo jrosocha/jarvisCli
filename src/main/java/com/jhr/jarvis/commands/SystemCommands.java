@@ -44,9 +44,9 @@ public class SystemCommands implements CommandMarker {
     
     @Autowired
     private DrawUtils drawUtils;
-    
-    @CliCommand(value = { "system" }, help = "usage: system <exact or regex>")
-    public String path(
+
+    @CliCommand(value = { "system" }, help = "usage: system <exact or starts with>")
+    public String osystem(
             @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "usage: system <regex>") String buffer) {
         
         String out = "";
@@ -54,9 +54,9 @@ public class SystemCommands implements CommandMarker {
         Date start = new Date();
         
         try {
-            starSystem = starSystemService.findExactSystem(buffer);           
+            starSystem = starSystemService.findExactSystemOrientDb(buffer);           
         } catch (SystemNotFoundException e) {
-            List<StarSystem> systems = starSystemService.findSystem(buffer);
+            List<StarSystem> systems = starSystemService.findSystemsOrientDb(buffer);
             if (systems.size() == 0) {
                 out += drawUtils.messageBox(3, "Error: No systems matching '" + buffer + "' could be found.",
                                                "Jarvis won't load a system until you've been close to it.");
@@ -81,7 +81,7 @@ public class SystemCommands implements CommandMarker {
             }
         }
         
-        List<Station> stations = stationService.getStationsForSystem(starSystem.getName());
+        List<Station> stations = stationService.getStationsForSystemOrientDb(starSystem.getName());
         List<Map<String, Object>> tableData = stations.stream().map(station->{
             Map<String, Object> tableRow = new HashMap<>();
             tableRow.put("STATION", station.getName());
@@ -125,7 +125,7 @@ public class SystemCommands implements CommandMarker {
                 return out;
             }
             try {
-                foundFrom = starSystemService.findExactSystem(storedSystem);                
+                foundFrom = starSystemService.findExactSystemOrientDb(storedSystem);                
             } catch (SystemNotFoundException e) {
                 out += drawUtils.messageBox(3, "Error:    Could not find 'from' system matching '" + from + "'",
                                                 usage,
@@ -135,7 +135,7 @@ public class SystemCommands implements CommandMarker {
             }
         } else {
             try {
-                foundFrom = starSystemService.findUniqueSystem(from);
+                foundFrom = starSystemService.findUniqueSystemOrientDb(from);
             } catch (SystemNotFoundException e) {
                 out += drawUtils.messageBox(3, "Error:    Could not find 'from' system matching '" + from + "'",
                                                 usage,
@@ -153,7 +153,7 @@ public class SystemCommands implements CommandMarker {
         }
         
         try {
-            foundTo = starSystemService.findUniqueSystem(to);
+            foundTo = starSystemService.findUniqueSystemOrientDb(to);
         } catch (SystemNotFoundException e) {
             out += drawUtils.messageBox(3, "Error:    Could not find 'to' system matching '" + to + "'",
                                             usage,
@@ -161,7 +161,7 @@ public class SystemCommands implements CommandMarker {
             return out;
         }
         
-        return starSystemService.calculateShortestPathBetweenSystems(foundFrom.getName(), foundTo.getName(), ship.jumpDistance);
+        return "Not Implemented Yet (sorry)";
     }
 	
 }
