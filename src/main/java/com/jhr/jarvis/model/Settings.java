@@ -20,8 +20,6 @@ public class Settings {
     @JsonIgnore
     private boolean loaded = false;
     
-    private String graphDb = null;
-    
     private String orientGraphDb = null;
     
     private String systemsFile = null;
@@ -84,13 +82,6 @@ public class Settings {
     public boolean isLoaded() {
         return loaded;
     }
-
-    /**
-     * @return the graphDb
-     */
-    public String getGraphDb() {
-        return graphDb;
-    }   
     
     /**
      * @return the eliteOcrScanDirectory
@@ -104,13 +95,6 @@ public class Settings {
      */
     public void setEliteOcrScanDirectory(String eliteOcrScanDirectory) {
         this.eliteOcrScanDirectory = eliteOcrScanDirectory;
-    }
-
-    /**
-     * @param graphDb the graphDb to set
-     */
-    public void setGraphDb(String graphDb) {
-        this.graphDb = graphDb;
     }
 
     /**
