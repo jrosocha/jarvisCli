@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -15,10 +18,16 @@ import org.springframework.stereotype.Service;
 
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
+import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.StarSystem;
+import com.jhr.jarvis.orientDb.functions.OSQLFunctionDijkstraWithWeightMax;
+import com.orientechnologies.orient.core.command.script.OCommandFunction;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
+import com.orientechnologies.orient.core.metadata.function.OFunction;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
+import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientEdge;
@@ -346,6 +355,55 @@ public class StarSystemService {
     private double distanceCalc(float x1, float x2, float y1, float y2, float z1, float z2) {
         return Math.sqrt((Math.pow((x1-x2),2.0)+Math.pow((y1-y2),2.0)+Math.pow((z1-z2),2.0)));
     }
+    
+    public String shortestPath(Ship ship, String startSystemName, String finishSystemName) {
+        OrientGraph graph = null;
+        LinkedList<OrientVertex> path = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            
+            //OSQLFunction dijkstra2 = OSQLEngine.getInstance().getFunction(OSQLFunctionDijkstraWithWeightMax.NAME);
+            
+           //System.out.println(graph.getRawGraph().getMetadata().getFunctionLibrary().getFunctionNames());
+            
+            OrientVertex startSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", startSystemName);
+            OrientVertex destinationSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", finishSystemName);
+            
+            //dijkstra2(<sourceVertex>, <destinationVertex>, <weightEdgeFieldName>, <weightLimit> [<direction>])
+            double lyLimit = ship.getJumpDistance();
+            Map<String,Object> params = new HashMap<String,Object>();
+            params.put("sourceVertex", startSystemVertex);
+            params.put("destinationVertex", destinationSystemVertex);
+            params.put("weightEdgeFieldName", "ly");
+            params.put("weightLimit", lyLimit);
+            
+            //path = graph.command(new OCommandFunction(OSQLFunctionDijkstraWithWeightMax.NAME)).execute(params);
+            
+            //path = (LinkedList<OrientVertex>) dijkstra2.execute(params);
+            graph.commit();
+        } catch (Exception e) {
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+        
+        String out = "";
+        for (OrientVertex node: path) {
+            
+            if (out.length() != 0) {
+                out += "--->";
+            }
+            
+            out += "(" + node.getProperty("name") + ")";
+        }
+        
+        System.out.print(out);
+        
+        
+        return out;
+        
+    }
+    
     
     /**
      * @return the userLastStoredSystem

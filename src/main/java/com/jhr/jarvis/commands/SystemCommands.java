@@ -159,7 +159,8 @@ public class SystemCommands implements CommandMarker {
             return out;
         }
         
-        return "Not Implemented Yet (sorry)";
+       return starSystemService.shortestPath(ship, foundFrom.getName(), foundTo.getName());
+
     }
 	
 }

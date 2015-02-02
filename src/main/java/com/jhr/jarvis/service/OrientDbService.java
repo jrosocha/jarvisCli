@@ -1,11 +1,16 @@
 package com.jhr.jarvis.service;
 
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.jhr.jarvis.model.Settings;
+import com.jhr.jarvis.orientDb.functions.OSQLFunctionDijkstraWithWeightMax;
+import com.orientechnologies.orient.core.sql.OSQLEngine;
+import com.orientechnologies.orient.graph.sql.functions.OGraphFunctionFactory;
 import com.tinkerpop.blueprints.Parameter;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -41,6 +46,8 @@ public class OrientDbService {
             try {
                 graphNoTx = factory.getNoTx();
                 
+                OSQLEngine.getInstance().registerFunction(OSQLFunctionDijkstraWithWeightMax.NAME, OSQLFunctionDijkstraWithWeightMax.class);
+                
                 if (graphNoTx.getVertexType("System") == null) {
                     graphNoTx.createVertexType("System");
                     graphNoTx.createKeyIndex("name", Vertex.class, new Parameter("type", "UNIQUE"), new Parameter("class", "System"));
@@ -67,6 +74,7 @@ public class OrientDbService {
                 if (graphNoTx.getEdgeType("Exchange") == null) {
                     graphNoTx.createEdgeType("Exchange");
                 }
+                
 
             } catch (Exception e) {
                 e.printStackTrace();

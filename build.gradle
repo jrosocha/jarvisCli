@@ -13,9 +13,9 @@ dependencies {
     compile "org.springframework.shell:spring-shell:$springShellVersion"
     compile "com.google.guava:guava:$guavaVersion"
     compile "com.fasterxml.jackson.core:jackson-databind:2.5.0"
-    compile "com.orientechnologies:orientdb-core:2.0-M3"
+    compile "com.orientechnologies:orientdb-core:2.0.1"
     compile "com.orientechnologies:orient-commons:2.0-M1"
-    compile "com.orientechnologies:orientdb-graphdb:2.0-M3"
+    compile "com.orientechnologies:orientdb-graphdb:2.0.1"
     compile "com.tinkerpop.blueprints:blueprints-core:2.6.0"
     
 	testCompile "junit:junit:$junitVersion"
