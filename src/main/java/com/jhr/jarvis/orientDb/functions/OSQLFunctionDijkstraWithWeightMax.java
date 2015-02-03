@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import com.orientechnologies.common.collection.OMultiValue;
+import com.orientechnologies.common.types.OModifiableBoolean;
 import com.orientechnologies.orient.core.command.OCommandContext;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.record.ORecord;
@@ -60,7 +61,8 @@ public class OSQLFunctionDijkstraWithWeightMax extends OSQLFunctionPathFinder {
   public LinkedList<OrientVertex> execute(Object iThis, OIdentifiable iCurrentRecord, Object iCurrentResult,
       final Object[] iParams, OCommandContext iContext) {
     
-    final OrientBaseGraph graph = OGraphCommandExecutorSQLFactory.getGraph(false, null);
+  final OModifiableBoolean shutdownFlag = new OModifiableBoolean();
+  final OrientBaseGraph graph = OGraphCommandExecutorSQLFactory.getGraph(false, shutdownFlag);
 
     final ORecord record = (ORecord) (iCurrentRecord != null ? iCurrentRecord.getRecord() : null);
 
@@ -85,29 +87,35 @@ public class OSQLFunctionDijkstraWithWeightMax extends OSQLFunctionPathFinder {
     paramWeightLimit = Double.parseDouble(iParams[3].toString());
     
     if (iParams.length > 4)
-      paramDirection = Direction.valueOf(iParams[3].toString().toUpperCase());
+      paramDirection = Direction.valueOf(iParams[4].toString().toUpperCase());
 
     return super.execute(iContext);
   }
 
   public String getSyntax() {
-    return "dijkstra2(<sourceVertex>, <destinationVertex>, <weightEdgeFieldName>, <weightLimit> [<direction>])";
+    return "dijkstra2(<sourceVertex>, <destinationVertex>, <weightEdgeFieldName>, <weightLimit>, [<direction>])";
   }
 
   protected float getDistance(final OrientVertex node, final OrientVertex target) {
     final Iterator<Edge> edges = node.getEdges(target, paramDirection).iterator();
     if (edges.hasNext()) {
       final Edge e = edges.next();
-      if (e != null && e.getProperty(paramWeightFieldName) != null && ((double)e.getProperty(paramWeightFieldName) <=  paramWeightLimit)) {
+      if (e != null && e.getLabel().equals("Frameshift") 
+              && e.getProperty(paramWeightFieldName) != null 
+              && ((double)e.getProperty(paramWeightFieldName) <=  paramWeightLimit)) {
+ 
         final Object fieldValue = e.getProperty(paramWeightFieldName);
-        if (fieldValue != null)
-          if (fieldValue instanceof Float)
+        if (fieldValue != null) {
+          if (fieldValue instanceof Float) {
             return (Float) fieldValue;
-          else if (fieldValue instanceof Number)
+          } else if (fieldValue instanceof Number) {
             return ((Number) fieldValue).floatValue();
+          }
+        }
       }
+      return Float.MAX_VALUE;
     }
-    return MIN;
+    return Float.MAX_VALUE;
   }
 
   @Override

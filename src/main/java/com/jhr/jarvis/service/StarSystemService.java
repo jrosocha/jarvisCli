@@ -24,12 +24,14 @@ import com.jhr.jarvis.orientDb.functions.OSQLFunctionDijkstraWithWeightMax;
 import com.orientechnologies.orient.core.command.script.OCommandFunction;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.metadata.function.OFunction;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientDynaElementIterable;
 import com.tinkerpop.blueprints.impls.orient.OrientEdge;
 import com.tinkerpop.blueprints.impls.orient.OrientElement;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -358,6 +360,8 @@ public class StarSystemService {
     
     public String shortestPath(Ship ship, String startSystemName, String finishSystemName) {
         OrientGraph graph = null;
+        
+        String out = "";
         LinkedList<OrientVertex> path = null;
         try {
             graph = orientDbService.getFactory().getTx();
@@ -377,31 +381,36 @@ public class StarSystemService {
             params.put("weightEdgeFieldName", "ly");
             params.put("weightLimit", lyLimit);
             
-            //path = graph.command(new OCommandFunction(OSQLFunctionDijkstraWithWeightMax.NAME)).execute(params);
+            String sql = String.format("select dijkstra2(%s, %s, '%s', %f, 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly", ship.getJumpDistance());
+            //String sql = String.format("select dijkstra(%s, %s, '%s', 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly");
+            System.out.println(sql);
             
-            //path = (LinkedList<OrientVertex>) dijkstra2.execute(params);
+            OrientDynaElementIterable result = graph.command(new OCommandSQL(sql)).execute();
+           
+            
+            for (Object obj : result) {
+                
+                System.out.println(obj.getClass().toString());
+                OrientVertex thing = (OrientVertex) obj; 
+                
+                path = thing.getRecord().field("dijkstra2");
+                break;
+            }
+
+            for (OrientVertex vertex: path) {
+                if (out.length() != 0) {
+                    out += "--->";
+                }
+                out += "(" + vertex.getProperty("name") + ")";
+            }
             graph.commit();
         } catch (Exception e) {
+            e.printStackTrace();
             if (graph != null) {
                 graph.rollback();
             }
         }
-        
-        String out = "";
-        for (OrientVertex node: path) {
-            
-            if (out.length() != 0) {
-                out += "--->";
-            }
-            
-            out += "(" + node.getProperty("name") + ")";
-        }
-        
-        System.out.print(out);
-        
-        
         return out;
-        
     }
     
     

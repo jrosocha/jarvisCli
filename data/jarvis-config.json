@@ -5,6 +5,6 @@
   "commodityFile" : "../data/Commodity.csv",
   "eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
   "eliteOcrScanArchiveEnabed" : false,
-  "longestDistanceEdge" : 18,
-  "closeSystemDistance" : 10
+  "longestDistanceEdge" : 30,
+  "closeSystemDistance" : 30
 }
