@@ -95,7 +95,7 @@ public class TradeCommands implements CommandMarker {
         }
         
         stationService.setUserLastStoredStation(savedExchange.getTo());
-        //out += starSystemService.calculateShortestPathBetweenSystems(savedExchange.getFrom().getSystem(), savedExchange.getTo().getSystem(), ship.getJumpDistance());        
+        out += starSystemService.calculateShortestPathBetweenSystems(ship, savedExchange.getFrom().getSystem(), savedExchange.getTo().getSystem());        
         return out;
     }
   

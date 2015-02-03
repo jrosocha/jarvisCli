@@ -159,7 +159,7 @@ public class SystemCommands implements CommandMarker {
             return out;
         }
         
-       return starSystemService.shortestPath(ship, foundFrom.getName(), foundTo.getName());
+       return starSystemService.calculateShortestPathBetweenSystems(ship, foundFrom.getName(), foundTo.getName());
 
     }
 	

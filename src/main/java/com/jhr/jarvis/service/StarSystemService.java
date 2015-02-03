@@ -29,6 +29,7 @@ import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
 import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
+import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientDynaElementIterable;
@@ -358,7 +359,7 @@ public class StarSystemService {
         return Math.sqrt((Math.pow((x1-x2),2.0)+Math.pow((y1-y2),2.0)+Math.pow((z1-z2),2.0)));
     }
     
-    public String shortestPath(Ship ship, String startSystemName, String finishSystemName) {
+    public String calculateShortestPathBetweenSystems(Ship ship, String startSystemName, String finishSystemName) {
         OrientGraph graph = null;
         
         String out = "";
@@ -384,11 +385,19 @@ public class StarSystemService {
                 break;
             }
 
+            if (path == null) {
+                return String.format("No path could be found between %s and %s with a %.2f jump distance", startSystemName, finishSystemName, ship.getJumpDistance());
+            }
+            
+            OrientVertex lastSystem = null;
             for (OrientVertex vertex: path) {
-                if (out.length() != 0) {
-                    out += "--->";
+                if (lastSystem != null) {
+                    
+                    Edge frameshift = lastSystem.getEdges(vertex, Direction.BOTH, "Frameshift").iterator().next();
+                    out += "--[" + String.format("%.2f", (double) frameshift.getProperty("ly")) + "]-->";
                 }
                 out += "(" + vertex.getProperty("name") + ")";
+                lastSystem = vertex;
             }
             graph.commit();
         } catch (Exception e) {
