@@ -365,15 +365,9 @@ public class StarSystemService {
         LinkedList<OrientVertex> path = null;
         try {
             graph = orientDbService.getFactory().getTx();
-            
-            //OSQLFunction dijkstra2 = OSQLEngine.getInstance().getFunction(OSQLFunctionDijkstraWithWeightMax.NAME);
-            
-           //System.out.println(graph.getRawGraph().getMetadata().getFunctionLibrary().getFunctionNames());
-            
             OrientVertex startSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", startSystemName);
             OrientVertex destinationSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", finishSystemName);
-            
-            //dijkstra2(<sourceVertex>, <destinationVertex>, <weightEdgeFieldName>, <weightLimit> [<direction>])
+
             double lyLimit = ship.getJumpDistance();
             Map<String,Object> params = new HashMap<String,Object>();
             params.put("sourceVertex", startSystemVertex);
@@ -382,17 +376,10 @@ public class StarSystemService {
             params.put("weightLimit", lyLimit);
             
             String sql = String.format("select dijkstra2(%s, %s, '%s', %f, 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly", ship.getJumpDistance());
-            //String sql = String.format("select dijkstra(%s, %s, '%s', 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly");
-            System.out.println(sql);
-            
             OrientDynaElementIterable result = graph.command(new OCommandSQL(sql)).execute();
-           
             
             for (Object obj : result) {
-                
-                System.out.println(obj.getClass().toString());
                 OrientVertex thing = (OrientVertex) obj; 
-                
                 path = thing.getRecord().field("dijkstra2");
                 break;
             }

@@ -1,13 +1,14 @@
 # jarvis
-Elite Dangerous Neo4j/Elite OCR Trading PoweredCLI
+Elite Dangerous OrientDb OCR Trading PoweredCLI
 
-This is a learning exercise for Neo4j and spring-shell in Java. If you like these kinds of things, feel free to pull and contribute. If you are a Neo4j expert, man I need some advice, because this this is awful slow around the [:FRAMESHIFT] edge once you get past 2 jumps in a go command.
+This is a learning exercise for OrientDb and spring-shell in Java. If you like these kinds of things, feel free to pull and contribute. If you are a OrientDb expert, man I need some advice, because this this is awful slow around the [:FRAMESHIFT] edge once you get past 2 jumps in a go command.
 
 Anyways the DB looks like this:
 ```
-(:System)-[:FRAMESHIFY{ly:float}]-(:System)-[](:Station)-[:EXCHANGE{buyPrice:int, sellPrice:int, supply:int, demand:int, timestamp:long}]->(:Commodity)
+(System)-[:Frameshift{ly:float}]-(System)-[](Station)-[Exchange{buyPrice:int, sellPrice:int, supply:int, demand:int, timestamp:long}]->(Commodity)
 ```
 
+## Installation
 * Install Elite:Dangerous .. or all of this will really be boring
 * Install EliteOCR and learn how to use it. This CLI uses the csv exports. Mind what directory they get written to.
 
@@ -32,6 +33,8 @@ Anyways the DB looks like this:
 Typing tab will provide some help.
 Tying help <command> will help more.
 
+
+## Commands
 A good list of things to do:
 
 ```
@@ -55,24 +58,19 @@ st goo
 Just like the find command, station (or st) also prints the table of commodity data available.
 
 ```
-go
+trade
 ```
 This will compute a 1 jump trade from your current station with your current ship
 
 ```
-go2
+trade --trades 2
 ```
-Computes a 2 stop within 1 jump of each other trade, starting with your current station and ship
+Computes a 2 stop within 1 jump of each other trade, starting with your current station and ship. This ISNT a safe parameter. --trades 2 will take only 1-2 seconds, but --trades 3 will take like 300 seconds with --jumps 2 and a ship that can go 12 ly. Its a big universe.
 
 ```
-go --jumps n 
+trade --jumps n  
 ```
-Computes a one one stop trade within n jumps of your starting system. This takes a bit of time. On my system with --jumps 3, ~40 seconds.
-
-```
-go2 --jumps 2 
-```
-Computes a 2 stop trade within 2 jumps of each stop .. 3 or more makes this unusably slow, around 20 minutes. 2 should return in ~60 seconds)
+Computes a one one stop trade within n jumps of your starting system. This parameter is safe. You can try --jumps 20 if your --trades are 1
 
 ```
 system aia
