@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -280,7 +281,7 @@ public class TradeCommands implements CommandMarker {
             return out;
         }
         
-        List<BestExchange> endOfRunTrades = new ArrayList<>();
+        List<BestExchange> endOfRunTrades = new CopyOnWriteArrayList<>();
         List<BestExchange> sortedBestExchangeList = tradeService.tradeNOrientDb(foundStation.getName(), ship, jumpDistance, tradeStops, endOfRunTrades);
         
         /* format for N stations */

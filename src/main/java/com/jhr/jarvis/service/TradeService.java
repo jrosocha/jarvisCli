@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,28 +69,35 @@ public class TradeService {
     
     public List<BestExchange> tradeNOrientDb(String fromStationName, Ship ship, int maxJumps, int tradeStops, List<BestExchange> endList) {
         
-        tradeStops--;
-        
-        List<BestExchange> trades = tradeOrientDb(fromStationName, ship, maxJumps);
-        
-        if (tradeStops > 0) {        
-            for (BestExchange trade: trades) {
-                List<BestExchange> thisTrip = tradeNOrientDb(trade.getSellStationName(), ship, maxJumps, tradeStops, endList);
-                thisTrip.parallelStream().forEach(exchange->{ exchange.setParent(trade); exchange.setRoutePerProfitUnit( exchange.getPerUnitProfit() + trade.getPerUnitProfit()); });
-                trade.setNextTrip(thisTrip);
+        try {
+            tradeStops--;
+            
+            List<BestExchange> trades = tradeOrientDb(fromStationName, ship, maxJumps);
+            
+            if (tradeStops > 0) {
+                int tradeStopsLocal = tradeStops;
+                trades.parallelStream().forEach(trade-> {
+                    //System.out.println(tradeStopsLocal + "");
+                    List<BestExchange> thisTrip = tradeNOrientDb(trade.getSellStationName(), ship, maxJumps, tradeStopsLocal, endList);
+                    thisTrip.stream().forEach(exchange->{ exchange.setParent(trade); exchange.setRoutePerProfitUnit( exchange.getPerUnitProfit() + trade.getPerUnitProfit()); });
+                    trade.setNextTrip(thisTrip);
+                });
+            } else {
+                endList.addAll(trades);
             }
-        } else {
-            endList.addAll(trades);
+            
+            return trades;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
-        
-        return trades;
     }
 
     
     public List<BestExchange> tradeOrientDb(String fromStationName, Ship ship, int maxJumps) {
         Station fromStation = new Station();
         OrientGraph graph = null;
-        List<BestExchange> bestExchangeList = new ArrayList<>();
+        List<BestExchange> bestExchangeList = new CopyOnWriteArrayList<>();
         
         try {
             graph = orientDbService.getFactory().getTx();
