@@ -3,6 +3,7 @@
   "orientGraphDb" : "/Users/jrosocha/orientdb-community-2.0/databases/jarvis",
   "systemsFile" : "data/System.csv",
   "commodityFile" : "data/Commodity.csv",
+  "avoidStationsFile": "data/avoidStations.json",
   "eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
   "eliteOcrScanArchiveEnabed" : false,
   "longestDistanceEdge" : 25,

@@ -357,7 +357,7 @@ public class StationService {
         try {
             graph = orientDbService.getFactory().getTx();
             Vertex systemVertex = graph.getVertexByKey("System.name", system);
-            Set<Vertex> systemStations = starSystemService.findStationsInSystem(systemVertex);
+            Set<Vertex> systemStations = starSystemService.findStationsInSystem(systemVertex, null);
             
             for (Vertex stationVertex: systemStations) {
                 Station station = new Station(stationVertex.getProperty("name"), system);

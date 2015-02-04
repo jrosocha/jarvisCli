@@ -67,26 +67,24 @@ public class TradeService {
           
     }
     
-    public List<BestExchange> tradeNOrientDb(String fromStationName, Ship ship, int maxJumps, int tradeStops, List<BestExchange> endList) {
+    public List<BestExchange> tradeNOrientDb(String fromStationName, BestExchange parent, Ship ship, int maxJumps, int tradeStops, List<BestExchange> endList) {
         
         try {
             tradeStops--;
             
-            List<BestExchange> trades = tradeOrientDb(fromStationName, ship, maxJumps);
+            List<BestExchange> exchangesForInputStation = tradeOrientDb(fromStationName, parent, ship, maxJumps);
             
             if (tradeStops > 0) {
                 int tradeStopsLocal = tradeStops;
-                trades.parallelStream().forEach(trade-> {
-                    //System.out.println(tradeStopsLocal + "");
-                    List<BestExchange> thisTrip = tradeNOrientDb(trade.getSellStationName(), ship, maxJumps, tradeStopsLocal, endList);
-                    thisTrip.stream().forEach(exchange->{ exchange.setParent(trade); exchange.setRoutePerProfitUnit( exchange.getPerUnitProfit() + trade.getPerUnitProfit()); });
-                    trade.setNextTrip(thisTrip);
+                exchangesForInputStation.parallelStream().forEach(exchangeForInputStation-> {                   
+                    List<BestExchange> thisTrip = tradeNOrientDb(exchangeForInputStation.getSellStationName(), exchangeForInputStation, ship, maxJumps, tradeStopsLocal, endList);                    
+                    exchangeForInputStation.setNextTrip(thisTrip);
                 });
             } else {
-                endList.addAll(trades);
+                endList.addAll(exchangesForInputStation);
             }
             
-            return trades;
+            return exchangesForInputStation;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -94,7 +92,7 @@ public class TradeService {
     }
 
     
-    public List<BestExchange> tradeOrientDb(String fromStationName, Ship ship, int maxJumps) {
+    public List<BestExchange> tradeOrientDb(String fromStationName, BestExchange parent, Ship ship, int maxJumps) {
         Station fromStation = new Station();
         OrientGraph graph = null;
         List<BestExchange> bestExchangeList = new CopyOnWriteArrayList<>();
@@ -118,7 +116,7 @@ public class TradeService {
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
                 
                 String destinationSystemName = destinationSystem.getProperty("name");
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
                 
                 for (Vertex station: systemStations) {
                     Station toStation = new Station(station.getProperty("name"), destinationSystemName);
@@ -129,8 +127,10 @@ public class TradeService {
                         Commodity buyCommodity = buyCommodities.get(commodity);
                         Commodity sellCommodity = sellCommodities.get(commodity);
                         BestExchange bestExchange = new BestExchange(fromStation, toStation, buyCommodity, sellCommodity, ship.getCargoSpace());
-                        bestExchange.setParent(null);
                         bestExchange.setRoutePerProfitUnit(bestExchange.getPerUnitProfit());
+                        bestExchange.setParent(parent);
+                        int parentRouteProfit = parent != null ? parent.getRoutePerProfitUnit() : 0;
+                        bestExchange.setRoutePerProfitUnit(parentRouteProfit + bestExchange.getPerUnitProfit());
                         // add the exchange to the master list.
                         bestExchangeList.add(bestExchange);
                     }
@@ -162,7 +162,7 @@ public class TradeService {
             systemsWithinNShipJumps.add(systemVertex);
             
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
                 for (Vertex station: systemStations) {
                     for (Edge exchange: station.getEdges(Direction.OUT, "Exchange")) {            
 
@@ -235,7 +235,7 @@ public class TradeService {
             systemsWithinNShipJumps.add(systemVertex);
             
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
                 for (Vertex station: systemStations) {
                     for (Edge exchange: station.getEdges(Direction.OUT, "Exchange")) {            
 

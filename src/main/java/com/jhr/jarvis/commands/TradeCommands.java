@@ -282,7 +282,7 @@ public class TradeCommands implements CommandMarker {
         }
         
         List<BestExchange> endOfRunTrades = new CopyOnWriteArrayList<>();
-        List<BestExchange> sortedBestExchangeList = tradeService.tradeNOrientDb(foundStation.getName(), ship, jumpDistance, tradeStops, endOfRunTrades);
+        List<BestExchange> sortedBestExchangeList = tradeService.tradeNOrientDb(foundStation.getName(), null, ship, jumpDistance, tradeStops, endOfRunTrades);
         
         /* format for N stations */
         if (tradeStops > 1) {

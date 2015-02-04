@@ -28,6 +28,8 @@ public class Settings {
     
     private String shipFile = null;
     
+    private String avoidStationsFile = null;
+    
     private String eliteOcrScanDirectory = null;
     
     private boolean eliteOcrScanArchiveEnabed = false;
@@ -193,6 +195,20 @@ public class Settings {
      */
     public void setOrientGraphDb(String orientGraphDb) {
         this.orientGraphDb = orientGraphDb;
+    }
+
+    /**
+     * @return the avoidStationsFile
+     */
+    public String getAvoidStationsFile() {
+        return avoidStationsFile;
+    }
+
+    /**
+     * @param avoidStationsFile the avoidStationsFile to set
+     */
+    public void setAvoidStationsFile(String avoidStationsFile) {
+        this.avoidStationsFile = avoidStationsFile;
     }
 
 }

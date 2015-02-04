@@ -57,11 +57,19 @@ public class StarSystemService {
      */
     private String userLastStoredSystem = null;
     
-    public Set<Vertex> findStationsInSystem(Vertex system) {
+    public Set<Vertex> findStationsInSystem(Vertex system, Set<String> avoidStations) {
+        
+        if (avoidStations == null) {
+            avoidStations = new HashSet<>();
+        }
+        
         Set<Vertex> stationsInSystem = new HashSet<>();
         for(Edge hasEdge: system.getEdges(com.tinkerpop.blueprints.Direction.OUT, "Has")) {
             Vertex station = hasEdge.getVertex(com.tinkerpop.blueprints.Direction.IN);
-            stationsInSystem.add(station);
+            String stationName = station.getProperty("name");
+            if (!avoidStations.contains(stationName)) {
+                stationsInSystem.add(station);
+            }
         }
         return stationsInSystem;  
     }
