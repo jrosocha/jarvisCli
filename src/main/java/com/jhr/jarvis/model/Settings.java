@@ -38,6 +38,9 @@ public class Settings {
     
     private int closeSystemDistance = 10;
     
+    private String eliteDangerousAppDirectory = null;
+     
+    
     @JsonIgnore
     @Autowired
     private ObjectMapper objectMapper;
@@ -209,6 +212,20 @@ public class Settings {
      */
     public void setAvoidStationsFile(String avoidStationsFile) {
         this.avoidStationsFile = avoidStationsFile;
+    }
+
+    /**
+     * @return the eliteDangerousAppDirectory
+     */
+    public String getEliteDangerousAppDirectory() {
+        return eliteDangerousAppDirectory;
+    }
+
+    /**
+     * @param eliteDangerousAppDirectory the eliteDangerousAppDirectory to set
+     */
+    public void setEliteDangerousAppDirectory(String eliteDangerousAppDirectory) {
+        this.eliteDangerousAppDirectory = eliteDangerousAppDirectory;
     }
 
 }

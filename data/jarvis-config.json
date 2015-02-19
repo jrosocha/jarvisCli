@@ -6,5 +6,6 @@
   "eliteOcrScanDirectory" : "/Users/jrosocha/trade/Elite Dangerous",
   "eliteOcrScanArchiveEnabed" : false,
   "longestDistanceEdge" : 30,
-  "closeSystemDistance" : 30
+  "closeSystemDistance" : 30,
+  "eliteDangerousAppDirectory" : "/Users/jrosocha/trade"
 }
