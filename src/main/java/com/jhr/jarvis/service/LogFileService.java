@@ -128,7 +128,7 @@ public class LogFileService {
                         List<StarSystem> found = starSystemService.searchSystemFileForStarSystemsByName(lastFoundSystemInNetLog.toUpperCase(), true);
                         if (found.size() > 0) {
                             starSystem = found.get(0);
-                            String out = drawUtils.messageBox(2, null, "Welcome to " + starSystem.getName());
+                            String out = OsUtils.LINE_SEPARATOR + drawUtils.messageBox(2, null, "Welcome to " + starSystem.getName());
                             Date start = new Date();
                             List<Station> stations = stationService.getStationsForSystemOrientDb(starSystem.getName());
                             List<Map<String, Object>> tableData = stations.stream().map(station->{
@@ -145,7 +145,7 @@ public class LogFileService {
                             System.out.println(out);
                             
                         } else {
-                            String out = drawUtils.messageBox(2, "Sir. An error has occured.", "Sir, I could not identify '" + foundSystem + "' in your Systems.csv. This will result in lost data.");
+                            String out = OsUtils.LINE_SEPARATOR + drawUtils.messageBox(2, "Sir. An error has occured.", "Sir, I could not identify '" + foundSystem + "' in your Systems.csv. This will result in lost data.");
                             System.out.println(out);
                         }
                     } catch (IOException e) {
