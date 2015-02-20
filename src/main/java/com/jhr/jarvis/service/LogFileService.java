@@ -50,7 +50,7 @@ public class LogFileService {
     @Autowired
     private StationService stationService;
     
-    @Scheduled(fixedRate = 120000)
+    @Scheduled(fixedRate = 15000)
     private void scheduledCheckForNewNetlogFile() {
         
         try {
@@ -89,7 +89,7 @@ public class LogFileService {
             throw new SettingNotFoundException("eliteDangerousAppDirectory is not correctly set in jarvis-config.json");
         }
         
-        File logDir = new File(eliteDangerousAppDirectory, "LOGS");
+        File logDir = new File(eliteDangerousAppDirectory, "Logs");
         if (!(logDir.exists() && logDir.isDirectory())) {
             throw new FileNotFoundException("logDir could not be found relative to " + eliteDangerousAppDirectory.getAbsolutePath());
         }
