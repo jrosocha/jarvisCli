@@ -21,6 +21,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
+import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.jhr.jarvis.exceptions.SettingNotFoundException;
 import com.jhr.jarvis.model.Settings;
@@ -37,6 +38,8 @@ public class LogFileService {
     private Thread netLogTailerThread = null;
     
     private String lastFoundSystemInNetLog = null;
+    
+    private EvictingQueue<String> last10LogLinesRead = EvictingQueue.create(10);
     
     @Autowired 
     private Settings settings;
@@ -115,6 +118,7 @@ public class LogFileService {
     
     public class NetLogTailerListener extends TailerListenerAdapter {
         public void handle(String line) {
+            last10LogLinesRead.add(line);
             // look for a line containing: System:26(Hyroks)    
             Pattern pattern = Pattern.compile("System:\\d*\\(([A-Za-z\\s']*)\\)");
             Matcher matcher = pattern.matcher(line);
@@ -155,5 +159,40 @@ public class LogFileService {
                 }
             }
         }
+    }
+
+    /**
+     * @return the activeNetLogFile
+     */
+    public File getActiveNetLogFile() {
+        return activeNetLogFile;
+    }
+
+    /**
+     * @param activeNetLogFile the activeNetLogFile to set
+     */
+    public void setActiveNetLogFile(File activeNetLogFile) {
+        this.activeNetLogFile = activeNetLogFile;
+    }
+
+    /**
+     * @return the lastFoundSystemInNetLog
+     */
+    public String getLastFoundSystemInNetLog() {
+        return lastFoundSystemInNetLog;
+    }
+
+    /**
+     * @param lastFoundSystemInNetLog the lastFoundSystemInNetLog to set
+     */
+    public void setLastFoundSystemInNetLog(String lastFoundSystemInNetLog) {
+        this.lastFoundSystemInNetLog = lastFoundSystemInNetLog;
+    }
+
+    /**
+     * @return the last10LogLinesRead
+     */
+    public EvictingQueue<String> getLast10LogLinesRead() {
+        return last10LogLinesRead;
     }
 }
