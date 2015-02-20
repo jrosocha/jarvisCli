@@ -39,7 +39,7 @@ public class LogFileService {
     
     private String lastFoundSystemInNetLog = null;
     
-    private EvictingQueue<String> last10LogLinesRead = EvictingQueue.create(10);
+    private EvictingQueue<String> last10LogLinesRead = EvictingQueue.create(50);
     
     @Autowired 
     private Settings settings;
@@ -120,7 +120,7 @@ public class LogFileService {
         public void handle(String line) {
             last10LogLinesRead.add(line);
             // look for a line containing: System:26(Hyroks)    
-            Pattern pattern = Pattern.compile("System:\\d*\\(([A-Za-z\\s']*)\\)");
+            Pattern pattern = Pattern.compile("System:\\d*\\(([^)]*)\\)");
             Matcher matcher = pattern.matcher(line);
             while (matcher.find()) {
                 String foundSystem =  matcher.group(1);

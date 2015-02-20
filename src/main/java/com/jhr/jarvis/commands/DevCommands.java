@@ -67,7 +67,7 @@ public class DevCommands implements CommandMarker {
 	        String logMsg = "";
 	        logMsg += "File @ " + file.getAbsolutePath() + OsUtils.LINE_SEPARATOR;
 	        logMsg += "Last System Found: " + system + OsUtils.LINE_SEPARATOR;
-	        logMsg += "Last 10 log lines read:" + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
+	        logMsg += "Last 50 log lines read:" + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
 	        for (String line: logFileService.getLast10LogLinesRead()) {
 	            logMsg += line + OsUtils.LINE_SEPARATOR;
 	        }
