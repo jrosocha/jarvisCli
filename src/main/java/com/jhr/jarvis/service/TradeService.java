@@ -116,7 +116,7 @@ public class TradeService {
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
                 
                 String destinationSystemName = destinationSystem.getProperty("name");
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystemOrientDb(destinationSystem, null);
                 
                 for (Vertex station: systemStations) {
                     Station toStation = new Station(station.getProperty("name"), destinationSystemName);
@@ -162,7 +162,7 @@ public class TradeService {
             systemsWithinNShipJumps.add(systemVertex);
             
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystemOrientDb(destinationSystem, null);
                 for (Vertex station: systemStations) {
                     for (Edge exchange: station.getEdges(Direction.OUT, "Exchange")) {            
 
@@ -235,7 +235,7 @@ public class TradeService {
             systemsWithinNShipJumps.add(systemVertex);
             
             for (Vertex destinationSystem: systemsWithinNShipJumps) {
-                Set<Vertex> systemStations = starSystemService.findStationsInSystem(destinationSystem, null);
+                Set<Vertex> systemStations = starSystemService.findStationsInSystemOrientDb(destinationSystem, null);
                 for (Vertex station: systemStations) {
                     for (Edge exchange: station.getEdges(Direction.OUT, "Exchange")) {            
 

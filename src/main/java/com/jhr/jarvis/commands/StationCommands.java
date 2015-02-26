@@ -1,5 +1,6 @@
 package com.jhr.jarvis.commands;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,8 +12,11 @@ import org.springframework.shell.support.util.OsUtils;
 import org.springframework.shell.support.util.StringUtils;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jhr.jarvis.exceptions.StationNotFoundException;
+import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.Station;
 import com.jhr.jarvis.service.AvoidStationService;
 import com.jhr.jarvis.service.StationService;
@@ -142,6 +146,43 @@ public class StationCommands implements CommandMarker {
         out += "Avoid Stations:" + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
         for (String stationName : avoidStationService.getAvoidStations()) {
             out += stationName + OsUtils.LINE_SEPARATOR;
+        }
+        
+        return out;
+    }
+    
+    @CliCommand(value = { "set" }, help = "usage: set --station goo --blackmarket")
+    public String set(
+            @CliOption(key = { "station" }, mandatory = false, help = "Station") final String station,
+            @CliOption(key = { "blackmarket" }, mandatory = false, help = "Toggle Station Black Market Flag", specifiedDefaultValue="true") final String blackMarket
+        ) throws JsonParseException, JsonMappingException, IOException {
+        
+        String usage1 = "Usage:       set --station <parial station name> --blackmarket";
+        String usage2 = "Description: Sets propeties on a station";
+        String usage3 = "Example:     set --station goo --blackmarket";
+        
+        String out = "";
+        Station foundStation;
+        
+        try {
+            foundStation = stationService.getBestMatchingStationOrStoredStation(station);
+        } catch (StationNotFoundException e) {
+            out += drawUtils.messageBox(3, "Error: Station matching expression '" + station + "' not found",
+                    usage1, usage2, usage3);
+            return out;
+        }
+        
+        if (!StringUtils.isEmpty(blackMarket)) {
+        
+	        boolean currentBlackMarket = foundStation.getBlackMarket() != null ? foundStation.getBlackMarket() : false;
+	        stationService.addPropertyToStationOrientDb(foundStation, "blackMarket", new Boolean(!currentBlackMarket));
+	        
+	        try {
+				out += stationService.findExactStationOrientDb(foundStation.getName()).toString();
+			} catch (StationNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
         
         return out;

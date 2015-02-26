@@ -83,13 +83,14 @@ public class SystemCommands implements CommandMarker {
         List<Map<String, Object>> tableData = stations.stream().map(station->{
             Map<String, Object> tableRow = new HashMap<>();
             tableRow.put("STATION", station.getName());
+            tableRow.put("BLACK MARKET", station.getBlackMarket());
             tableRow.put("DAYS OLD", (new Date().getTime() - station.getDate())/1000/60/60/24 );
             return tableRow;
         }).collect(Collectors.toList());
 
         out += OsUtils.LINE_SEPARATOR;
         out += "SYSTEM: " + starSystem.getName() + " @ " + starSystem.getX() + ", " + starSystem.getY() + ", " + starSystem.getZ() + OsUtils.LINE_SEPARATOR ; 
-        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, ImmutableList.of("STATION", "DAYS OLD"));
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, ImmutableList.of("STATION", "BLACK MARKET", "DAYS OLD"));
         out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
         return out;
     }

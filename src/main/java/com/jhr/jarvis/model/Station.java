@@ -7,7 +7,9 @@ public class Station {
 
     private String system;
     private String name;
-    private long date;
+    private Boolean blackMarket;
+
+	private long date;
     
     private Map<String,Commodity> availableCommodityExchanges = new HashMap<>();
     
@@ -28,13 +30,11 @@ public class Station {
         super();
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
     @Override
-    public String toString() {
-        return "Station [system=" + system + ", name=" + name + ", date=" + date + "]";
-    }
+	public String toString() {
+		return "Station [system=" + system + ", name=" + name
+				+ ", blackMarket=" + blackMarket + ", date=" + date + "]";
+	}
     
     /* (non-Javadoc)
      * @see java.lang.Object#hashCode()
@@ -128,4 +128,13 @@ public class Station {
     public void setAvailableCommodityExchanges(Map<String, Commodity> availableCommodityExchanges) {
         this.availableCommodityExchanges = availableCommodityExchanges;
     }
+    
+    public Boolean getBlackMarket() {
+		return blackMarket;
+	}
+
+	public void setBlackMarket(Boolean blackMarket) {
+		this.blackMarket = blackMarket;
+	}
+
 }

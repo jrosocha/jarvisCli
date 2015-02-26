@@ -117,11 +117,7 @@ public class StationService {
             if (stationVertex == null) {
                 throw new StationNotFoundException("No station matching '" + stationName + "' in graph.");
             }
-            out.setName(stationVertex.getProperty("name"));
-            
-            // get a system for a station.
-            Vertex systemVertex = getSystemVertexForStationVertex(stationVertex);
-            out.setSystem(systemVertex.getProperty("name"));
+            out = vertexToStation(stationVertex);
             graph.commit();
         } catch (Exception e) {
             if (graph != null) {
@@ -199,6 +195,7 @@ public class StationService {
         String out = "";
         out += "System: " +station.getSystem() + OsUtils.LINE_SEPARATOR;
         out += "Station: " +station.getName() + OsUtils.LINE_SEPARATOR;
+        out += "Black Market: " +station.getBlackMarket() + OsUtils.LINE_SEPARATOR;
         out += "Data Age in Days: " + tableData.get(0).get("DAYS OLD") + OsUtils.LINE_SEPARATOR + OsUtils.LINE_SEPARATOR;
         out += TableRenderer.renderMapDataAsTable(tableData, ImmutableList.of("GROUP", "COMMODITY", "BUY @", "SUPPLY", "SELL @", "DEMAND"));
         return out;
@@ -245,11 +242,10 @@ public class StationService {
             for (Vertex stationVertex : (Iterable<Vertex>) graph.command(
                     new OCommandSQL("select from Station where name like '" + partial.toUpperCase() + "%'")).execute()) {
                 
-                Vertex systemVertex = getSystemVertexForStationVertex(stationVertex);
-                Station station = new Station(stationVertex.getProperty("name"), systemVertex.getProperty("name"));
+                Station station = vertexToStation(stationVertex);
                 out.add(station);
             }
-            
+            graph.commit();
         } catch (Exception e) {
             e.printStackTrace();
             if (graph != null) {
@@ -357,14 +353,11 @@ public class StationService {
         try {
             graph = orientDbService.getFactory().getTx();
             Vertex systemVertex = graph.getVertexByKey("System.name", system);
-            Set<Vertex> systemStations = starSystemService.findStationsInSystem(systemVertex, null);
+            Set<Vertex> systemStations = starSystemService.findStationsInSystemOrientDb(systemVertex, null);
             
             for (Vertex stationVertex: systemStations) {
-                Station station = new Station(stationVertex.getProperty("name"), system);
-                for (Edge exchange: stationVertex.getEdges(Direction.OUT, "Exchange")) {
-                    station.setDate(exchange.getProperty("date"));
-                    break;
-                }
+            	
+                Station station = vertexToStation(stationVertex);
                 stations.add(station);
             }
             graph.commit();
@@ -386,6 +379,43 @@ public class StationService {
             e.printStackTrace();
         }
         return stationCount;        
+    }
+    
+    public void addPropertyToStationOrientDb(Station station, String property, Object value) {
+        
+        OrientGraph graph = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex vertexStation = (OrientVertex) graph.getVertexByKey("Station.name", station.getName());
+            if (vertexStation == null) {            	
+            	throw new StationNotFoundException(station.getName() + " not found.");
+            }
+            vertexStation.setProperty(property, value);
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
+    }
+    
+    public Station vertexToStation(Vertex stationVertex) {
+    	Station out = new Station();
+        out.setName(stationVertex.getProperty("name"));
+        
+        Boolean blackMarket = stationVertex.getProperty("blackMarket") != null ? stationVertex.getProperty("blackMarket") : Boolean.FALSE;
+        out.setBlackMarket(blackMarket);
+        
+        Vertex systemVertex = getSystemVertexForStationVertex(stationVertex);
+        out.setSystem(systemVertex.getProperty("name"));
+        
+        for (Edge exchange: stationVertex.getEdges(Direction.OUT, "Exchange")) {
+            out.setDate(exchange.getProperty("date"));
+            break;
+        }
+        
+        return out;
     }
     
     /**

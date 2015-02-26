@@ -57,7 +57,7 @@ public class StarSystemService {
      */
     private String userLastStoredSystem = null;
     
-    public Set<Vertex> findStationsInSystem(Vertex system, Set<String> avoidStations) {
+    public Set<Vertex> findStationsInSystemOrientDb(Vertex system, Set<String> avoidStations) {
         
         if (avoidStations == null) {
             avoidStations = new HashSet<>();
@@ -314,7 +314,7 @@ public class StarSystemService {
                foundSystem.setZ((float)systemVertex.getProperty("z"));     
                out.add(foundSystem);
            }
-           
+           graph.commit();
        } catch (Exception e) {
            e.printStackTrace();
            if (graph != null) {
