@@ -245,7 +245,7 @@ public class TradeCommands implements CommandMarker {
         String usage5 = "or try a ship cargo;distance;cash to set up your ship.";
         
         String out = "";
-        Station foundStation;
+        Station foundStation = null;
         Ship ship;
         
         try {
@@ -255,7 +255,7 @@ public class TradeCommands implements CommandMarker {
                     usage1, usage2, usage3, usage4, usage5);
             return out;
         }
-        
+
         int jumpDistance = 1;
         if (jumps != null) {
             jumpDistance = jumps;

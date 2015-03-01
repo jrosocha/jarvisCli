@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -14,21 +15,20 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Service;
 
+import com.google.common.collect.ImmutableList;
 import com.jhr.jarvis.exceptions.SystemNotFoundException;
 import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.StarSystem;
-import com.jhr.jarvis.orientDb.functions.OSQLFunctionDijkstraWithWeightMax;
-import com.orientechnologies.orient.core.command.script.OCommandFunction;
+import com.jhr.jarvis.model.Station;
+import com.jhr.jarvis.table.TableRenderer;
+import com.jhr.jarvis.util.DrawUtils;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.metadata.function.OFunction;
-import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
-import com.orientechnologies.orient.core.sql.OSQLEngine;
 import com.orientechnologies.orient.core.sql.filter.OSQLPredicate;
-import com.orientechnologies.orient.core.sql.functions.OSQLFunction;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
@@ -48,6 +48,12 @@ public class StarSystemService {
     
     @Autowired
     private OrientDbService orientDbService;
+
+    @Autowired
+    private StationService stationService;
+    
+    @Autowired
+    private DrawUtils drawUtils;
     
     @Autowired
     private Settings settings;
@@ -414,6 +420,27 @@ public class StarSystemService {
                 graph.rollback();
             }
         }
+        return out;
+    }
+    
+    public String printStarSystemTable(StarSystem starSystem) {
+    	
+    	String out = "";
+        Date start = new Date();
+        List<Station> stations = stationService.getStationsForSystemOrientDb(starSystem.getName());
+        List<Map<String, Object>> tableData = stations.stream().map(station->{
+            Map<String, Object> tableRow = new HashMap<>();
+            tableRow.put("STATION", station.getName());
+            tableRow.put("BLACK MARKET", station.getBlackMarket());
+            tableRow.put("DAYS OLD", (new Date().getTime() - station.getDate())/1000/60/60/24 );
+            return tableRow;
+        }).collect(Collectors.toList());
+
+        out += OsUtils.LINE_SEPARATOR;
+        out += "SYSTEM: " + starSystem.getName() + " @ " + starSystem.getX() + ", " + starSystem.getY() + ", " + starSystem.getZ() + OsUtils.LINE_SEPARATOR ; 
+        out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, ImmutableList.of("STATION", "BLACK MARKET", "DAYS OLD"));
+        out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+        
         return out;
     }
     

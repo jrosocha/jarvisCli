@@ -132,20 +132,9 @@ public class LogFileService {
                         List<StarSystem> found = starSystemService.searchSystemFileForStarSystemsByName(lastFoundSystemInNetLog.toUpperCase(), true);
                         if (found.size() > 0) {
                             starSystem = found.get(0);
+                            
                             String out = OsUtils.LINE_SEPARATOR + drawUtils.messageBox(2, null, "Welcome to " + starSystem.getName());
-                            Date start = new Date();
-                            List<Station> stations = stationService.getStationsForSystemOrientDb(starSystem.getName());
-                            List<Map<String, Object>> tableData = stations.stream().map(station->{
-                                Map<String, Object> tableRow = new HashMap<>();
-                                tableRow.put("STATION", station.getName());
-                                tableRow.put("DAYS OLD", (new Date().getTime() - station.getDate())/1000/60/60/24 );
-                                return tableRow;
-                            }).collect(Collectors.toList());
-
-                            out += OsUtils.LINE_SEPARATOR;
-                            out += "SYSTEM: " + starSystem.getName() + " @ " + starSystem.getX() + ", " + starSystem.getY() + ", " + starSystem.getZ() + OsUtils.LINE_SEPARATOR ; 
-                            out += OsUtils.LINE_SEPARATOR + TableRenderer.renderMapDataAsTable(tableData, ImmutableList.of("STATION", "DAYS OLD"));
-                            out += OsUtils.LINE_SEPARATOR + "executed in " + (new Date().getTime() - start.getTime())/1000.0 + " seconds.";
+                            out += starSystemService.printStarSystemTable(starSystem);
                             System.out.println(out);
                             
                         } else {
