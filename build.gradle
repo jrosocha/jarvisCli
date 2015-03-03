@@ -18,7 +18,8 @@ dependencies {
     compile "com.orientechnologies:orientdb-graphdb:2.0.1"
     compile "com.tinkerpop.blueprints:blueprints-core:2.6.0"
     compile "commons-io:commons-io:2.4"
-    
+    compile "cglib:cglib:2.2.2"
+    compile "org.springframework:spring-aspects:4.0.1.RELEASE"
     
 	testCompile "junit:junit:$junitVersion"
 	runtime "log4j:log4j:$log4jVersion"

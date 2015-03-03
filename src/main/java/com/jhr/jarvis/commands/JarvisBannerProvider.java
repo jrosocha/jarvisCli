@@ -22,6 +22,7 @@ import org.springframework.shell.plugin.support.DefaultBannerProvider;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Component;
 
+import com.jhr.jarvis.orientDb.annotations.OrientDb;
 import com.jhr.jarvis.service.StarSystemService;
 import com.jhr.jarvis.service.StationService;
 import com.jhr.jarvis.service.TradeService;

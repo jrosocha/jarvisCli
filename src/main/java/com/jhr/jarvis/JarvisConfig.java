@@ -2,6 +2,7 @@ package com.jhr.jarvis;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 @Configuration
 @EnableScheduling
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 public class JarvisConfig {
 
     public static final ObjectMapper MAPPER = new ObjectMapper();
