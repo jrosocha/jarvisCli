@@ -5,7 +5,6 @@ apply plugin: 'eclipse'
 apply plugin: 'application'
 
 repositories {
-	mavenLocal()
 	mavenCentral()
 }
 
@@ -13,9 +12,9 @@ dependencies {
     compile "org.springframework.shell:spring-shell:$springShellVersion"
     compile "com.google.guava:guava:$guavaVersion"
     compile "com.fasterxml.jackson.core:jackson-databind:2.5.0"
-    compile "com.orientechnologies:orientdb-core:2.0.1"
-    compile "com.orientechnologies:orient-commons:2.0-M1"
-    compile "com.orientechnologies:orientdb-graphdb:2.0.1"
+    compile "com.orientechnologies:orientdb-core:2.0.4"
+    //compile "com.orientechnologies:orient-commons:2.0-M1"
+    compile "com.orientechnologies:orientdb-graphdb:2.0.4"
     compile "com.tinkerpop.blueprints:blueprints-core:2.6.0"
     compile "commons-io:commons-io:2.4"
     compile "cglib:cglib:2.2.2"

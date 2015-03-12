@@ -15,7 +15,7 @@ import org.springframework.core.annotation.Order;
 import com.jhr.jarvis.service.OrientDbService;
 
 
-@DependsOn("springApplicationContextHolder")
+@DependsOn({"springApplicationContextHolder", "orientDbService"})
 @Configuration
 @Aspect
 @Order(Ordered.HIGHEST_PRECEDENCE)

@@ -18,6 +18,7 @@ package com.jhr.jarvis;
 import java.io.IOException;
 
 import org.springframework.shell.Bootstrap;
+import org.springframework.stereotype.Service;
 
 
 public class Main {

@@ -22,7 +22,6 @@ import org.springframework.shell.plugin.support.DefaultBannerProvider;
 import org.springframework.shell.support.util.OsUtils;
 import org.springframework.stereotype.Component;
 
-import com.jhr.jarvis.orientDb.annotations.OrientDb;
 import com.jhr.jarvis.service.StarSystemService;
 import com.jhr.jarvis.service.StationService;
 import com.jhr.jarvis.service.TradeService;
@@ -50,10 +49,6 @@ public class JarvisBannerProvider extends DefaultBannerProvider  {
 		buf.append("*                                     *"+ OsUtils.LINE_SEPARATOR);
 		buf.append("=======================================" + OsUtils.LINE_SEPARATOR);
 		buf.append("Version:          " + getVersion() + OsUtils.LINE_SEPARATOR);
-		buf.append("Systems:          " + starSystemService.systemCountOrientDb() + OsUtils.LINE_SEPARATOR);
-        buf.append("Frameshift Edges: " + starSystemService.shiftCountOrientDb() + OsUtils.LINE_SEPARATOR);
-		buf.append("Stations:         " + stationService.stationCountOrientDb() + OsUtils.LINE_SEPARATOR);
-        buf.append("Exchanges:        " + tradeService.exchangeCountOrientDb() + OsUtils.LINE_SEPARATOR);
         
 		
 		return buf.toString();
