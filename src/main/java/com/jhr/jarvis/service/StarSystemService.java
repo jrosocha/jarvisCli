@@ -24,8 +24,6 @@ import com.jhr.jarvis.model.Settings;
 import com.jhr.jarvis.model.Ship;
 import com.jhr.jarvis.model.StarSystem;
 import com.jhr.jarvis.model.Station;
-import com.jhr.jarvis.orientDb.annotations.OrientDb;
-import com.jhr.jarvis.orientDb.annotations.OrientTransaction;
 import com.jhr.jarvis.table.TableRenderer;
 import com.jhr.jarvis.util.DrawUtils;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
@@ -318,41 +316,48 @@ public class StarSystemService {
      * @return
      */
     public List<StarSystem> findSystemsOrientDb(String partial) {
-        return findSystemsOrientDb(partial, null);
-    }
-
-    @OrientTransaction
-    private List<StarSystem> findSystemsOrientDb(String partial, OrientDb orientDb) {
+        OrientGraph graph = null;
         List<StarSystem> out = new ArrayList<>();
-        for (Vertex systemVertex : (Iterable<Vertex>) orientDb.getGraph().command(new OCommandSQL("select from System where name like '" + partial.toUpperCase() + "%'")).execute()) {
-            StarSystem foundSystem = new StarSystem(systemVertex.getProperty("name"));
-            foundSystem.setX((float) systemVertex.getProperty("x"));
-            foundSystem.setY((float) systemVertex.getProperty("y"));
-            foundSystem.setZ((float) systemVertex.getProperty("z"));
-            out.add(foundSystem);
+        try {
+            graph = orientDbService.getFactory().getTx();
+            for (Vertex systemVertex : (Iterable<Vertex>) graph.command(new OCommandSQL("select from System where name like '" + partial.toUpperCase() + "%'")).execute()) {
+                StarSystem foundSystem = new StarSystem(systemVertex.getProperty("name"));
+                foundSystem.setX((float) systemVertex.getProperty("x"));
+                foundSystem.setY((float) systemVertex.getProperty("y"));
+                foundSystem.setZ((float) systemVertex.getProperty("z"));
+                out.add(foundSystem);
+            }
+        } catch (Exception e) {
+            if (graph != null) {
+                graph.rollback();
+            }
         }
         return out;
     }
 
     public long systemCountOrientDb() {
-        return systemCountOrientDb(null);
-    }
-
-    @OrientTransaction
-    private long systemCountOrientDb(OrientDb orientDb) {
+        
         long systemCount = 0;
-        systemCount = orientDb.getGraph().countVertices("System");
-        return systemCount;
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            systemCount = graph.countVertices("System");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return systemCount;        
     }
-
+    
     public long shiftCountOrientDb() {
-        return shiftCountOrientDb(null);
-    }
-
-    @OrientTransaction
-    private long shiftCountOrientDb(OrientDb orientDb) {
+        
         long shiftCount = 0;
-        shiftCount = orientDb.getGraph().countEdges("Frameshift");
+        try {
+            OrientGraph graph = orientDbService.getFactory().getTx();
+            shiftCount = graph.countEdges("Frameshift");
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return shiftCount;
     }
 
@@ -372,49 +377,52 @@ public class StarSystemService {
     }
 
     public String calculateShortestPathBetweenSystems(Ship ship, String startSystemName, String finishSystemName) {
-        return calculateShortestPathBetweenSystems(ship, startSystemName, finishSystemName, null);
-    }
-
-    @OrientTransaction
-    private String calculateShortestPathBetweenSystems(Ship ship, String startSystemName, String finishSystemName, OrientDb orientDb) {
-
+        OrientGraph graph = null;
+        
         String out = "";
         LinkedList<OrientVertex> path = null;
+        try {
+            graph = orientDbService.getFactory().getTx();
+            OrientVertex startSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", startSystemName);
+            OrientVertex destinationSystemVertex = (OrientVertex) graph.getVertexByKey("System.name", finishSystemName);
 
-        OrientVertex startSystemVertex = (OrientVertex) orientDb.getGraph().getVertexByKey("System.name", startSystemName);
-        OrientVertex destinationSystemVertex = (OrientVertex) orientDb.getGraph().getVertexByKey("System.name", finishSystemName);
-
-        double lyLimit = ship.getJumpDistance();
-        Map<String, Object> params = new HashMap<String, Object>();
-        params.put("sourceVertex", startSystemVertex);
-        params.put("destinationVertex", destinationSystemVertex);
-        params.put("weightEdgeFieldName", "ly");
-        params.put("weightLimit", lyLimit);
-
-        String sql = String.format("select dijkstra2(%s, %s, '%s', %f, 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly", ship.getJumpDistance());
-        OrientDynaElementIterable result = orientDb.getGraph().command(new OCommandSQL(sql)).execute();
-
-        for (Object obj : result) {
-            OrientVertex thing = (OrientVertex) obj;
-            path = thing.getRecord().field("dijkstra2");
-            break;
-        }
-
-        if (path == null) {
-            return String.format("No path could be found between %s and %s with a %.2f jump distance", startSystemName, finishSystemName, ship.getJumpDistance());
-        }
-
-        OrientVertex lastSystem = null;
-        for (OrientVertex vertex : path) {
-            if (lastSystem != null) {
-
-                Edge frameshift = lastSystem.getEdges(vertex, Direction.BOTH, "Frameshift").iterator().next();
-                out += "--[" + String.format("%.2f", (double) frameshift.getProperty("ly")) + "]-->";
+            double lyLimit = ship.getJumpDistance();
+            Map<String,Object> params = new HashMap<String,Object>();
+            params.put("sourceVertex", startSystemVertex);
+            params.put("destinationVertex", destinationSystemVertex);
+            params.put("weightEdgeFieldName", "ly");
+            params.put("weightLimit", lyLimit);
+            
+            String sql = String.format("select dijkstra2(%s, %s, '%s', %f, 'BOTH')", startSystemVertex.getId().toString(), destinationSystemVertex.getId().toString(), "ly", ship.getJumpDistance());
+            OrientDynaElementIterable result = graph.command(new OCommandSQL(sql)).execute();
+            
+            for (Object obj : result) {
+                OrientVertex thing = (OrientVertex) obj; 
+                path = thing.getRecord().field("dijkstra2");
+                break;
             }
-            out += "(" + vertex.getProperty("name") + ")";
-            lastSystem = vertex;
-        }
 
+            if (path == null) {
+                return String.format("No path could be found between %s and %s with a %.2f jump distance", startSystemName, finishSystemName, ship.getJumpDistance());
+            }
+            
+            OrientVertex lastSystem = null;
+            for (OrientVertex vertex: path) {
+                if (lastSystem != null) {
+                    
+                    Edge frameshift = lastSystem.getEdges(vertex, Direction.BOTH, "Frameshift").iterator().next();
+                    out += "--[" + String.format("%.2f", (double) frameshift.getProperty("ly")) + "]-->";
+                }
+                out += "(" + vertex.getProperty("name") + ")";
+                lastSystem = vertex;
+            }
+            graph.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (graph != null) {
+                graph.rollback();
+            }
+        }
         return out;
     }
 

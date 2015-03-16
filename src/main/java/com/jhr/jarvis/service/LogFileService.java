@@ -53,7 +53,7 @@ public class LogFileService {
     @Autowired
     private StationService stationService;
     
-    @Scheduled(initialDelay = 20000, fixedRate = 15000)
+    @Scheduled(initialDelay = 5000, fixedRate = 15000)
     private void scheduledCheckForNewNetlogFile() {
         
         try {

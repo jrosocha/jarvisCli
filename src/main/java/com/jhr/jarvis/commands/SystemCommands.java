@@ -46,10 +46,19 @@ public class SystemCommands implements CommandMarker {
     @CliCommand(value = { "system" }, help = "usage: system <exact or starts with>")
     public String osystem(
             @CliOption(key = { "", "command" }, optionContext = "disable-string-converter availableCommands", help = "usage: system <regex>") String buffer) {
-        
+            
         String out = "";
+        String usage = "Usage:    sys <regex>";
+        
         StarSystem starSystem;
         Date start = new Date();
+        
+        if (StringUtils.isEmpty(buffer)) {
+            out += drawUtils.messageBox(3, "Error: No systems matching '" + buffer + "' could be found.",
+                    usage,
+                    "Jarvis won't store a system until you've been close to it.");
+            return out;
+        }
         
         try {
             starSystem = starSystemService.findExactSystemOrientDb(buffer);           
